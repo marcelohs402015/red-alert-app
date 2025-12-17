@@ -1,72 +1,123 @@
 package com.redalert.backend.application.usecase;
 
+import com.redalert.backend.domain.model.Alert;
 import com.redalert.backend.domain.model.ClassAlertDto;
-import lombok.Getter;
+import com.redalert.backend.domain.repository.AlertRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Service for managing alert history.
- * Stores alerts in memory for quick retrieval.
+ * Service for managing alert history with database persistence.
  */
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class AlertHistoryService {
 
-    @Getter
-    private final List<ClassAlertDto> alertHistory = Collections.synchronizedList(new ArrayList<>());
-
-    private static final int MAX_HISTORY_SIZE = 100;
+    private final AlertRepository alertRepository;
 
     /**
-     * Adds an alert to history.
-     * 
-     * @param alert The alert to add
+     * Adds a new alert to the database.
      */
-    public void addAlert(ClassAlertDto alert) {
-        synchronized (alertHistory) {
-            alertHistory.add(0, alert); // Add to beginning
+    @Transactional
+    public Alert addAlert(ClassAlertDto classAlert) {
+        Alert alert = new Alert();
+        alert.setTitle(classAlert.title());
+        alert.setDescription(classAlert.description());
+        alert.setAlertDate(classAlert.date());
+        alert.setUrl(classAlert.url());
+        alert.setIsUrgent(classAlert.isUrgent());
 
-            // Keep only last MAX_HISTORY_SIZE alerts
-            if (alertHistory.size() > MAX_HISTORY_SIZE) {
-                alertHistory.remove(alertHistory.size() - 1);
-            }
-        }
-
-        log.debug("Alert added to history. Total alerts: {}", alertHistory.size());
+        Alert saved = alertRepository.save(alert);
+        log.info("Alert saved to database: {} (ID: {})", saved.getTitle(), saved.getId());
+        return saved;
     }
 
     /**
-     * Gets recent alerts.
-     * 
-     * @param limit Maximum number of alerts to return
-     * @return List of recent alerts
+     * Adds alert with email metadata.
      */
-    public List<ClassAlertDto> getRecentAlerts(int limit) {
-        synchronized (alertHistory) {
-            int size = Math.min(limit, alertHistory.size());
-            return new ArrayList<>(alertHistory.subList(0, size));
-        }
+    @Transactional
+    public Alert addAlert(ClassAlertDto classAlert, String emailId, String emailFrom, String emailSubject) {
+        Alert alert = new Alert();
+        alert.setTitle(classAlert.title());
+        alert.setDescription(classAlert.description());
+        alert.setAlertDate(classAlert.date());
+        alert.setUrl(classAlert.url());
+        alert.setIsUrgent(classAlert.isUrgent());
+        alert.setEmailId(emailId);
+        alert.setEmailFrom(emailFrom);
+        alert.setEmailSubject(emailSubject);
+
+        Alert saved = alertRepository.save(alert);
+        log.info("Alert saved with email metadata: {} (ID: {})", saved.getTitle(), saved.getId());
+        return saved;
     }
 
     /**
-     * Clears all alert history.
+     * Gets recent alerts with limit.
      */
-    public void clearHistory() {
-        synchronized (alertHistory) {
-            alertHistory.clear();
-        }
-        log.info("Alert history cleared");
+    public List<Alert> getRecentAlerts(int limit) {
+        return alertRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, limit)).getContent();
     }
 
     /**
-     * Gets total alert count.
+     * Gets all alerts.
      */
-    public int getTotalCount() {
-        return alertHistory.size();
+    public List<Alert> getAllAlerts() {
+        return alertRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    /**
+     * Gets only urgent alerts.
+     */
+    public List<Alert> getUrgentAlerts() {
+        return alertRepository.findByIsUrgentTrueOrderByCreatedAtDesc();
+    }
+
+    /**
+     * Gets alerts by category.
+     */
+    public List<Alert> getAlertsByCategory(Long categoryId) {
+        return alertRepository.findByCategoryIdOrderByCreatedAtDesc(categoryId);
+    }
+
+    /**
+     * Counts total alerts.
+     */
+    public long countAlerts() {
+        return alertRepository.count();
+    }
+
+    /**
+     * Counts urgent alerts.
+     */
+    public long countUrgentAlerts() {
+        return alertRepository.countByIsUrgentTrue();
+    }
+
+    /**
+     * Clears all alerts from database.
+     */
+    @Transactional
+    public void clearAllAlerts() {
+        long count = alertRepository.count();
+        alertRepository.deleteAll();
+        log.info("Cleared {} alerts from database", count);
+    }
+
+    /**
+     * Deletes alerts older than specified days.
+     */
+    @Transactional
+    public void deleteOldAlerts(int daysOld) {
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(daysOld);
+        alertRepository.deleteOlderThan(cutoff);
+        log.info("Deleted alerts older than {} days", daysOld);
     }
 }

@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 
 import java.io.File;
 import java.io.IOException;
@@ -104,12 +105,14 @@ public class GoogleConfig {
 
         /**
          * Provides Gmail service bean.
+         * Lazy initialization to avoid blocking startup with OAuth flow.
          * 
          * @return Configured Gmail service
          * @throws GeneralSecurityException If security configuration fails
          * @throws IOException              If credentials cannot be loaded
          */
         @Bean
+        @Lazy
         public Gmail gmail() throws GeneralSecurityException, IOException {
                 final NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
                 Credential credential = getCredentials(httpTransport);
@@ -122,12 +125,14 @@ public class GoogleConfig {
 
         /**
          * Provides Calendar service bean.
+         * Lazy initialization to avoid blocking startup with OAuth flow.
          * 
          * @return Configured Calendar service
          * @throws GeneralSecurityException If security configuration fails
          * @throws IOException              If credentials cannot be loaded
          */
         @Bean
+        @Lazy
         public Calendar calendar() throws GeneralSecurityException, IOException {
                 final NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
                 Credential credential = getCredentials(httpTransport);

@@ -1,6 +1,9 @@
 import type { ClassAlert } from '../types/alert';
 
-const API_BASE_URL = 'http://localhost:8081/api/v1';
+/**
+ * API Service for backend communication.
+ */
+const API_BASE_URL = 'http://localhost:8086/api/v1';
 
 /**
  * Email data from backend.

@@ -16,7 +16,7 @@ const useRedAlertSocket = () => {
     const [latestAlert, setLatestAlert] = useState<ClassAlert | null>(null);
     const [client, setClient] = useState<Client | null>(null);
 
-    const WEBSOCKET_URL = 'http://localhost:8081/ws-red-alert';
+    const SOCKET_URL = 'http://localhost:8086/ws-red-alert';
     const TOPIC = '/topic/alerts';
 
     /**
@@ -26,7 +26,7 @@ const useRedAlertSocket = () => {
         setConnectionStatus('connecting');
 
         const stompClient = new Client({
-            webSocketFactory: () => new SockJS(WEBSOCKET_URL) as any,
+            webSocketFactory: () => new SockJS(SOCKET_URL) as any,
 
             onConnect: () => {
                 console.log('✅ Connected to Red Alert WebSocket');
@@ -76,7 +76,7 @@ const useRedAlertSocket = () => {
             setClient(null);
             setConnectionStatus('disconnected');
         }
-    }, [client]);
+    }, []); // Removido 'client' das dependências para evitar loop
 
     /**
      * Plays alert sound when new alert arrives.

@@ -4,6 +4,7 @@ import useRedAlertSocket from './hooks/useRedAlertSocket';
 import AlertOverlay from './components/AlertOverlay';
 import EmailList from './components/EmailList';
 import AlertHistory from './components/AlertHistory';
+import CategoryManager from './components/CategoryManager';
 import type { ConnectionStatus } from './types/alert';
 
 /**
@@ -97,6 +98,15 @@ const App: React.FC = () => {
               </motion.div>
             )}
           </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-8"
+        >
+          <CategoryManager />
         </motion.div>
 
         <motion.div

@@ -1,42 +1,94 @@
+# ============================================================================
+# Docker Compose - Red Alert Infrastructure
+# ============================================================================
+# Este arquivo define os serviços de infraestrutura necessários para a aplicação:
+# - PostgreSQL: Banco de dados principal
+# - PgAdmin: Interface web para administração do PostgreSQL
+# ============================================================================
+
 services:
+  # ==========================================================================
+  # PostgreSQL Database
+  # ==========================================================================
   postgres:
     image: postgres:16-alpine
-    container_name: red-alert-postgres
+    container_name: redalert-postgres
+    restart: unless-stopped
+    
     environment:
+      # Credenciais do banco de dados
       POSTGRES_DB: redalert
-      POSTGRES_USER: redalert
-      POSTGRES_PASSWORD: redalert123
-      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      
+      # Configurações de performance
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=pt_BR.UTF-8"
+    
     ports:
-      - "5432:5432"
+      # Porta padrão do PostgreSQL
+      - "5433:5432"
+    
     volumes:
+      # Persistência de dados (cria pasta se não existir)
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - red-alert-network
+      
+      # Scripts de inicialização (executados na primeira inicialização)
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U redalert"]
+      # Health check para garantir que PostgreSQL está pronto
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+    
+    networks:
+      - redalert-network
 
+  # ==========================================================================
+  # PgAdmin (Interface Web para administração)
+  # ==========================================================================
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: red-alert-pgadmin
+    container_name: redalert-pgadmin
+    restart: unless-stopped
+    
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@redalert.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_DEFAULT_EMAIL: admin@redalert.local
+      PGADMIN_DEFAULT_PASSWORD: admin
       PGADMIN_CONFIG_SERVER_MODE: 'False'
+    
     ports:
       - "5050:80"
-    networks:
-      - red-alert-network
+    
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    
+    networks:
+      - redalert-network
 
+# ============================================================================
+# Volumes
+# ============================================================================
+# Volumes nomeados para persistência de dados entre reinicializações
 volumes:
   postgres_data:
     driver: local
+    name: redalert_postgres_data
+  
+  pgadmin_data:
+    driver: local
+    name: redalert_pgadmin_data
 
+# ============================================================================
+# Networks
+# ============================================================================
+# Rede isolada para comunicação entre containers
 networks:
-  red-alert-network:
+  redalert-network:
     driver: bridge
+    name: redalert-network

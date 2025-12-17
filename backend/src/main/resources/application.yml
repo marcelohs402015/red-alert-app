@@ -4,10 +4,14 @@ spring:
   
   # Database Configuration
   datasource:
-    url: jdbc:postgresql://localhost:5432/redalert
+    url: jdbc:postgresql://localhost:5433/redalert
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
+  
+  # Server Configuration
+  server:
+    port: 8086
   
   # JPA Configuration
   jpa:
@@ -29,7 +33,7 @@ spring:
       enabled: true
 
 server:
-  port: 8081
+  port: 8086
 
 # Google OAuth2 Configuration
 google:

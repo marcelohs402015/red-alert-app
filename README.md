@@ -291,4 +291,4 @@ MIT License
 4. Envie um email de teste
 5. Aguarde o alerta dramático! 🚨
 
-**Desenvolvido com ❤️ usando Java 21, Spring Boot 3, React 19 e Gemini AI**
+**Desenvolvido com ❤️ por Marcelo Hernandes da Silva usando Java 21, Spring Boot 3, React 19 e Gemini AI**
