@@ -226,20 +226,38 @@ public class EmailPollingService {
             // Analyze with AI
             ClassAlertDto alert = aiAnalysisPort.analyzeEmailContent(emailBody);
 
-            if (alert != null && alert.isUrgent()) {
+            log.info("=== ALERT PROCESSING START ===");
+            log.info("AI Analysis result: {}", alert != null ? "Found" : "NULL");
+
+            // If no urgent alert found, create a basic notification
+            if (alert == null || !alert.isUrgent()) {
+                log.info("📬 Email received (not urgent): '{}'", subject);
+
+                // Create basic alert for notification
+                alert = new ClassAlertDto(
+                    subject,
+                    receivedAt,
+                    null, // no URL
+                    String.format("Email from: %s\n\n%s", from, snippet),
+                    false // not urgent
+                );
+                log.info("Created basic alert DTO: isUrgent={}", alert.isUrgent());
+            } else {
                 log.info("🚨 Urgent alert detected: {}", alert.title());
 
-                // Save to history
+                // Save to history (only urgent alerts)
                 alertHistoryService.addAlert(alert);
 
-                // Create calendar event
+                // Create calendar event (only urgent alerts)
                 createCalendarEvent(alert);
-
-                // Send WebSocket notification
-                notificationPort.sendAlert(alert);
-            } else {
-                log.debug("No urgent alert found in email '{}'", subject);
             }
+
+            // ALWAYS send WebSocket notification (urgent or not)
+            log.info(">>> CALLING notificationPort.sendAlert() with alert: title='{}', isUrgent={}",
+                    alert.title(), alert.isUrgent());
+            notificationPort.sendAlert(alert);
+            log.info(">>> notificationPort.sendAlert() COMPLETED");
+            log.info("=== ALERT PROCESSING END ===");
 
             // Mark as read to avoid reprocessing
             markAsRead(messageId);

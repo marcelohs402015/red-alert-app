@@ -46,6 +46,8 @@ backend/spring-boot-*.log
 
 # Google OAuth tokens
 backend/tokens/
+tokens/
+**/StoredCredential
 backend/StoredCredential
 
 # IDE - IntelliJ IDEA
@@ -212,6 +214,8 @@ docker-volumes/
 # Google Cloud credentials
 **/credentials.json
 **/client_secret*.json
+**/gcloud.md
+
 
 # API Keys (extra safety)
 **/*api-key*.txt
