@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, CheckCircle, X, Info } from 'lucide-react';
 import Portal from './Portal';
 
-export type ModalType = 'confirm' | 'success' | 'error' | 'info';
+export type ModalType = 'confirm' | 'success' | 'error' | 'info' | 'danger' | 'warning';
 
 interface ConfirmModalProps {
     isOpen: boolean;
@@ -34,6 +34,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         success: <CheckCircle className="w-12 h-12 text-green-500" />,
         error: <X className="w-12 h-12 text-red-500" />,
         info: <Info className="w-12 h-12 text-blue-500" />,
+        danger: <X className="w-12 h-12 text-red-500" />,
+        warning: <AlertTriangle className="w-12 h-12 text-yellow-500" />,
     };
 
     const buttonColors = {
@@ -41,6 +43,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         success: 'bg-green-600 hover:bg-green-700',
         error: 'bg-red-600 hover:bg-red-700',
         info: 'bg-blue-600 hover:bg-blue-700',
+        danger: 'bg-red-600 hover:bg-red-700',
+        warning: 'bg-yellow-600 hover:bg-yellow-700',
     };
 
     return (

@@ -321,7 +321,7 @@ const ProcessedEmailsModal: React.FC<ProcessedEmailsModalProps> = ({ isOpen, onC
                     message={confirmModal.message}
                     type={confirmModal.type}
                     onConfirm={confirmModal.onConfirm}
-                    onCancel={() => setConfirmModal(null)}
+                    onClose={() => setConfirmModal(null)}
                 />
             )}
         </Portal>

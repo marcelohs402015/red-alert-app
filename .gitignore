@@ -1,0 +1,218 @@
+# ============================================
+# Red Alert App - Monorepo .gitignore
+# ============================================
+
+# ============================================
+# Backend (Java/Maven/Spring Boot)
+# ============================================
+
+# Maven
+backend/target/
+backend/pom.xml.tag
+backend/pom.xml.releaseBackup
+backend/pom.xml.versionsBackup
+backend/pom.xml.next
+backend/release.properties
+backend/dependency-reduced-pom.xml
+backend/buildNumber.properties
+backend/.mvn/timing.properties
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# Compiled class files
+backend/**/*.class
+
+# Log files
+backend/**/*.log
+backend/logs/
+backend/error.log
+backend/backend-log.txt
+backend/startup-log.txt
+
+# Package Files
+backend/**/*.jar
+backend/**/*.war
+backend/**/*.nar
+backend/**/*.ear
+backend/**/*.zip
+backend/**/*.tar.gz
+backend/**/*.rar
+
+# Virtual machine crash logs
+backend/hs_err_pid*
+backend/replay_pid*
+
+# Spring Boot
+backend/spring-boot-*.log
+
+# Google OAuth tokens
+backend/tokens/
+backend/StoredCredential
+
+# IDE - IntelliJ IDEA
+backend/.idea/
+backend/**/*.iml
+backend/**/*.iws
+backend/**/*.ipr
+backend/out/
+
+# IDE - Eclipse
+backend/.classpath
+backend/.project
+backend/.settings/
+backend/bin/
+
+# IDE - NetBeans
+backend/nbproject/private/
+backend/nbbuild/
+backend/dist/
+backend/nbdist/
+backend/.nb-gradle/
+
+# IDE - VS Code
+backend/.vscode/
+backend/**/*.code-workspace
+
+# ============================================
+# Frontend (Node.js/React/Vite)
+# ============================================
+
+# Dependencies
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.js
+
+# Testing
+frontend/coverage/
+
+# Production
+frontend/build/
+frontend/dist/
+frontend/dist-ssr/
+
+# Misc
+frontend/.DS_Store
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/lerna-debug.log*
+
+# Editor directories and files
+frontend/.vscode/*
+!frontend/.vscode/extensions.json
+frontend/.idea
+frontend/*.suo
+frontend/*.ntvs*
+frontend/*.njsproj
+frontend/*.sln
+frontend/*.sw?
+
+# ============================================
+# Database
+# ============================================
+
+# PostgreSQL
+*.sql.backup
+*.dump
+
+# ============================================
+# Environment Variables
+# ============================================
+
+.env
+.env.local
+.env.*.local
+**/.env
+
+# ============================================
+# OS Generated Files
+# ============================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ============================================
+# IDE and Editors
+# ============================================
+
+# JetBrains IDEs (IntelliJ, WebStorm, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================
+# Temporary Files
+# ============================================
+
+*.tmp
+*.temp
+*.bak
+*.backup
+*.cache
+
+# ============================================
+# Docker
+# ============================================
+
+# Docker volumes (if any)
+docker-volumes/
+
+# ============================================
+# Git
+# ============================================
+
+# Remove any nested .git directories (prevent submodules)
+**/.git/
+
+# ============================================
+# Project Specific
+# ============================================
+
+# Google Cloud credentials
+**/credentials.json
+**/client_secret*.json
+
+# API Keys (extra safety)
+**/*api-key*.txt
+**/*secret*.txt
