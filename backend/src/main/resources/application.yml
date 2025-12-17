@@ -51,7 +51,7 @@ gemini:
 # Email Polling Configuration
 email:
   polling:
-    fixed-delay: 60000 # 1 minute
+    fixed-delay: 20000 # 1 minute
     query: "from:fullcycle.com.br is:unread"
 
 # WebSocket Configuration
