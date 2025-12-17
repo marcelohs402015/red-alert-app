@@ -1,4 +1,4 @@
-# 🚨 Red Alert - Sistema de Monitoramento de Aulas
+# 🚨 Red Alert - Sistema de Monitoramento de Emails
 
 Sistema completo de monitoramento em tempo real que detecta emails importantes do google, usa IA para análise e envia alertas dramáticos via WebSocket.
 

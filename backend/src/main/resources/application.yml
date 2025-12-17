@@ -83,7 +83,7 @@ springdoc:
     enabled: true
   info:
     title: Red Alert API
-    description: Sistema de Monitoramento de Aulas em Tempo Real
+    description: Sistema de Monitoramento de Emails em Tempo Real
     version: 1.0.0
     contact:
       name: Red Alert Team

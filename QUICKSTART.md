@@ -191,7 +191,7 @@ red-alert-app/
 
 **🎉 Pronto! Seu Red Alert está funcionando!**
 
-Agora você tem um sistema completo de monitoramento de aulas com:
+Agora você tem um sistema completo de monitoramento de emails com:
 - ✅ Polling automático de emails
 - ✅ Análise com IA
 - ✅ Criação de eventos no Calendar
