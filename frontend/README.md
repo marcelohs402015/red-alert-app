@@ -1,6 +1,6 @@
 # Red Alert Frontend
 
-Sistema de monitoramento de aulas em tempo real com alertas visuais dramáticos.
+Sistema de monitoramento de emails google em tempo real com alertas visuais dramáticos.
 
 ## 🎨 Stack Tecnológica
 
