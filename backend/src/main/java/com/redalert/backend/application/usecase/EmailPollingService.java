@@ -20,7 +20,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
@@ -49,6 +52,7 @@ public class EmailPollingService {
     private final NotificationPort notificationPort;
     private final AlertHistoryService alertHistoryService;
     private final CategoryService categoryService;
+    private final ProcessedEmailService processedEmailService;
 
     private static final String USER_ID = "me";
     private static final String LABEL_UNREAD = "UNREAD";
@@ -99,19 +103,16 @@ public class EmailPollingService {
 
     /**
      * Polls Gmail for a specific category.
+     * Uses the category's filter fields to build the Gmail query.
      * 
      * @param category The category to poll
      * @return Number of messages processed
      */
     private int pollCategory(Category category) throws IOException {
-        String query = category.getEmailQuery();
+        // Build query from category's filter fields
+        String query = category.buildGmailQuery();
 
-        // Ensure query includes is:unread
-        if (!query.toLowerCase().contains("is:unread")) {
-            query = query + " is:unread";
-        }
-
-        log.debug("Polling category '{}' with query: {}", category.getName(), query);
+        log.info("Polling category '{}' with query: {}", category.getName(), query);
 
         List<Message> messages = fetchMessages(query);
 
@@ -162,7 +163,6 @@ public class EmailPollingService {
     private void processMessage(Message message, Category category) {
         try {
             String messageId = message.getId();
-            log.debug("Processing message ID: {} for category: {}", messageId, category.getName());
 
             // Fetch full message content
             Message fullMessage = gmail.users()
@@ -171,11 +171,31 @@ public class EmailPollingService {
                     .setFormat("full")
                     .execute();
 
-            // Extract subject
+            // Extract from, subject
+            String from = extractHeader(fullMessage, "From");
             String subject = extractSubject(fullMessage);
+            String date = extractHeader(fullMessage, "Date");
 
             // Extract email body
             String emailBody = extractEmailBody(fullMessage);
+
+            // LOG JSON DETALHADO
+            log.info("---------- JSON EMAIL INICIO ----------");
+            log.info("{{");
+            log.info("  \"messageId\": \"{}\",", messageId);
+            log.info("  \"category\": \"{}\",", category.getName());
+            log.info("  \"query\": \"{}\",", category.buildGmailQuery());
+            log.info("  \"from\": \"{}\",", from);
+            log.info("  \"subject\": \"{}\",", subject);
+            log.info("  \"date\": \"{}\",", date);
+            log.info("  \"bodyLength\": {},", emailBody != null ? emailBody.length() : 0);
+            log.info("  \"bodyPreview\": \"{}\"",
+                    emailBody != null
+                            ? emailBody.substring(0, Math.min(500, emailBody.length())).replace("\n", " ").replace("\"",
+                                    "'")
+                            : "null");
+            log.info("}}");
+            log.info("---------- JSON EMAIL FIM ----------");
 
             if (emailBody == null || emailBody.isBlank()) {
                 log.warn("Empty email body for message ID: {}", messageId);
@@ -183,7 +203,25 @@ public class EmailPollingService {
                 return;
             }
 
-            log.info("Processing email: '{}' from category '{}'", subject, category.getName());
+            log.info("📧 Processing email: '{}' from '{}'", subject, from);
+
+            // Extract snippet (first 200 chars of body)
+            String snippet = emailBody.length() > 200
+                    ? emailBody.substring(0, 200) + "..."
+                    : emailBody;
+            snippet = snippet.replace("\n", " ").replace("\r", " ");
+
+            // Parse received date
+            LocalDateTime receivedAt = parseEmailDate(date);
+
+            // Save to database
+            processedEmailService.saveIfNotExists(
+                    messageId,
+                    from,
+                    subject,
+                    snippet,
+                    receivedAt,
+                    category);
 
             // Analyze with AI
             ClassAlertDto alert = aiAnalysisPort.analyzeEmailContent(emailBody);
@@ -215,14 +253,21 @@ public class EmailPollingService {
      * Extracts subject from Gmail message.
      */
     private String extractSubject(Message message) {
+        return extractHeader(message, "Subject");
+    }
+
+    /**
+     * Extracts any header from Gmail message.
+     */
+    private String extractHeader(Message message, String headerName) {
         if (message.getPayload() != null && message.getPayload().getHeaders() != null) {
             return message.getPayload().getHeaders().stream()
-                    .filter(h -> "Subject".equalsIgnoreCase(h.getName()))
+                    .filter(h -> headerName.equalsIgnoreCase(h.getName()))
                     .findFirst()
                     .map(h -> h.getValue())
-                    .orElse("(No Subject)");
+                    .orElse("(Not Found)");
         }
-        return "(No Subject)";
+        return "(Not Found)";
     }
 
     /**
@@ -328,5 +373,29 @@ public class EmailPollingService {
      */
     private void fallbackPolling(Throwable throwable) {
         log.error("Gmail service unavailable, skipping polling cycle. Error: {}", throwable.getMessage());
+    }
+
+    /**
+     * Parses email date string to LocalDateTime.
+     * Handles common email date formats (RFC 2822).
+     *
+     * @param dateString The date string from email header
+     * @return LocalDateTime or current time if parsing fails
+     */
+    private LocalDateTime parseEmailDate(String dateString) {
+        if (dateString == null || dateString.isBlank()) {
+            return LocalDateTime.now();
+        }
+
+        try {
+            // Common email date format: "Mon, 16 Dec 2025 19:01:33 -0300"
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE, d MMM yyyy HH:mm:ss Z",
+                    java.util.Locale.ENGLISH);
+            ZonedDateTime zonedDateTime = ZonedDateTime.parse(dateString.trim(), formatter);
+            return zonedDateTime.toLocalDateTime();
+        } catch (Exception e) {
+            log.warn("Failed to parse email date '{}', using current time", dateString);
+            return LocalDateTime.now();
+        }
     }
 }

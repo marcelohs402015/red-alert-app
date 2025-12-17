@@ -44,10 +44,10 @@ const EmailList: React.FC = () => {
                 <div>
                     <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                         <Mail className="w-6 h-6 text-blue-400" />
-                        Emails Full Cycle
+                        Emails Capturados
                     </h2>
                     <p className="text-gray-400 text-sm mt-1">
-                        Emails não lidos de fullcycle.com.br
+                        Emails não lidos encontrados pelo sistema
                     </p>
                 </div>
 

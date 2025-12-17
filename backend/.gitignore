@@ -14,6 +14,7 @@ target/
 # Google OAuth tokens
 tokens/
 credentials.json
+gcloud.md
 
 # Logs
 *.log

@@ -1,18 +1,21 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, List, Edit2, Trash2, Power, PowerOff, Save, X } from 'lucide-react';
+import { Plus, List, Edit2, Trash2, Power, PowerOff, Save, X, Search } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 import Portal from './Portal';
 
 /**
- * Category from backend.
+ * Category from backend with specific filter fields.
  */
 export interface Category {
     id: number;
     name: string;
     description: string;
-    emailQuery: string;
+    fromFilter: string;
+    subjectKeywords: string;
+    bodyKeywords: string;
     isActive: boolean;
+    generatedQuery: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -29,7 +32,9 @@ const CategoryManager: React.FC = () => {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        emailQuery: '',
+        fromFilter: '',
+        subjectKeywords: '',
+        bodyKeywords: '',
         isActive: true,
     });
 
@@ -73,8 +78,13 @@ const CategoryManager: React.FC = () => {
     };
 
     const handleAdd = async () => {
-        if (!formData.name.trim() || !formData.emailQuery.trim()) {
-            showMessage('Campos Obrigatórios', 'Preencha o nome e a query do Gmail.', 'error');
+        if (!formData.name.trim()) {
+            showMessage('Campo Obrigatório', 'Preencha o nome da categoria.', 'error');
+            return;
+        }
+
+        if (!formData.fromFilter.trim() && !formData.subjectKeywords.trim() && !formData.bodyKeywords.trim()) {
+            showMessage('Filtro Obrigatório', 'Preencha pelo menos um filtro (remetente, assunto ou palavras-chave).', 'error');
             return;
         }
 
@@ -111,7 +121,9 @@ const CategoryManager: React.FC = () => {
                 body: JSON.stringify({
                     name: category.name,
                     description: category.description,
-                    emailQuery: category.emailQuery,
+                    fromFilter: category.fromFilter,
+                    subjectKeywords: category.subjectKeywords,
+                    bodyKeywords: category.bodyKeywords,
                     isActive: category.isActive,
                 }),
             });
@@ -175,7 +187,9 @@ const CategoryManager: React.FC = () => {
         setFormData({
             name: '',
             description: '',
-            emailQuery: '',
+            fromFilter: '',
+            subjectKeywords: '',
+            bodyKeywords: '',
             isActive: true,
         });
     };
@@ -199,7 +213,7 @@ const CategoryManager: React.FC = () => {
                         ⚙️ Gerenciar Categorias
                     </h2>
                     <p className="text-gray-400 text-sm mt-1">
-                        Configure as categorias de monitoramento de emails
+                        Configure filtros para monitoramento de emails
                     </p>
                 </div>
 
@@ -240,57 +254,107 @@ const CategoryManager: React.FC = () => {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="mb-6 p-4 bg-slate-700/30 rounded-lg border border-slate-600/30"
+                        className="mb-6 p-6 bg-slate-700/30 rounded-lg border border-slate-600/30"
                     >
-                        <h3 className="text-lg font-semibold text-white mb-4">Nova Categoria</h3>
-                        <div className="grid gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">
-                                    Nome da Categoria *
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Ex: Alerta FullCycle MBA IA"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full px-4 py-2 bg-slate-600/50 text-white rounded-lg border border-slate-500/50 focus:border-blue-500 outline-none placeholder-gray-400"
-                                />
+                        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                            <Plus className="w-5 h-5" /> Nova Categoria
+                        </h3>
+
+                        <div className="grid gap-5">
+                            {/* Name & Description */}
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                                        Nome da Categoria *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ex: Full Cycle MBA"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        className="w-full px-4 py-2 bg-slate-600/50 text-white rounded-lg border border-slate-500/50 focus:border-blue-500 outline-none placeholder-gray-400"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                                        Descrição
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ex: Alertas de aulas ao vivo"
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        className="w-full px-4 py-2 bg-slate-600/50 text-white rounded-lg border border-slate-500/50 focus:border-blue-500 outline-none placeholder-gray-400"
+                                    />
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">
-                                    Descrição
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Ex: Monitoramento de emails do curso"
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full px-4 py-2 bg-slate-600/50 text-white rounded-lg border border-slate-500/50 focus:border-blue-500 outline-none placeholder-gray-400"
-                                />
-                            </div>
+                            {/* Filters Section */}
+                            <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-600/20">
+                                <h4 className="text-md font-medium text-blue-400 mb-4 flex items-center gap-2">
+                                    <Search className="w-4 h-4" /> Filtros do Gmail
+                                </h4>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">
-                                    Query do Gmail *
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Ex: from:fullcycle.com.br is:unread"
-                                    value={formData.emailQuery}
-                                    onChange={(e) => setFormData({ ...formData, emailQuery: e.target.value })}
-                                    className="w-full px-4 py-2 bg-slate-600/50 text-white rounded-lg border border-slate-500/50 focus:border-blue-500 outline-none placeholder-gray-400 font-mono text-sm"
-                                />
-                                <p className="text-xs text-gray-400 mt-1">
-                                    Use a sintaxe de busca do Gmail. Ex: subject:importante, from:email@exemplo.com
-                                </p>
+                                <div className="grid gap-4">
+                                    {/* From Filter */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                                            📧 Remetente (from:)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Ex: fullcycle.com.br"
+                                            value={formData.fromFilter}
+                                            onChange={(e) => setFormData({ ...formData, fromFilter: e.target.value })}
+                                            className="w-full px-4 py-2 bg-slate-600/50 text-white rounded-lg border border-slate-500/50 focus:border-blue-500 outline-none placeholder-gray-400 font-mono text-sm"
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            Domínio ou email do remetente
+                                        </p>
+                                    </div>
+
+                                    {/* Subject Keywords */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                                            📌 Palavras no Assunto (subject:)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Ex: AO VIVO, MBA, AGORA"
+                                            value={formData.subjectKeywords}
+                                            onChange={(e) => setFormData({ ...formData, subjectKeywords: e.target.value })}
+                                            className="w-full px-4 py-2 bg-slate-600/50 text-white rounded-lg border border-slate-500/50 focus:border-blue-500 outline-none placeholder-gray-400 font-mono text-sm"
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            Separe múltiplas palavras por vírgula. Busca com OR.
+                                        </p>
+                                    </div>
+
+                                    {/* Body Keywords */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                                            📝 Palavras no Corpo do Email
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Ex: link de acesso, aula ao vivo"
+                                            value={formData.bodyKeywords}
+                                            onChange={(e) => setFormData({ ...formData, bodyKeywords: e.target.value })}
+                                            className="w-full px-4 py-2 bg-slate-600/50 text-white rounded-lg border border-slate-500/50 focus:border-blue-500 outline-none placeholder-gray-400 font-mono text-sm"
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            Separe múltiplas palavras por vírgula. Busca com OR.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
                             <button
                                 onClick={handleAdd}
-                                className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                                className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                             >
-                                Adicionar
+                                <Plus className="w-5 h-5" /> Adicionar Categoria
                             </button>
                         </div>
                     </motion.div>
@@ -313,7 +377,7 @@ const CategoryManager: React.FC = () => {
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.9, opacity: 0 }}
                                 onClick={(e) => e.stopPropagation()}
-                                className="bg-slate-800 rounded-xl border border-slate-700 p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto"
+                                className="bg-slate-800 rounded-xl border border-slate-700 p-6 max-w-4xl w-full mx-4 max-h-[85vh] overflow-y-auto"
                             >
                                 <div className="flex items-center justify-between mb-6">
                                     <h3 className="text-2xl font-bold text-white">📋 Categorias Cadastradas</h3>
@@ -332,7 +396,7 @@ const CategoryManager: React.FC = () => {
                                         Nenhuma categoria cadastrada. Clique em "Nova Categoria" para adicionar.
                                     </div>
                                 ) : (
-                                    <div className="space-y-3">
+                                    <div className="space-y-4">
                                         {categories.map((category) => (
                                             <motion.div
                                                 key={category.id}
@@ -341,57 +405,93 @@ const CategoryManager: React.FC = () => {
                                                 className="p-4 bg-slate-700/30 rounded-lg border border-slate-600/30"
                                             >
                                                 {editingId === category.id ? (
-                                                    <div className="grid gap-3">
-                                                        <input
-                                                            type="text"
-                                                            value={category.name}
-                                                            onChange={(e) => {
-                                                                const updated = categories.map(c =>
-                                                                    c.id === category.id ? { ...c, name: e.target.value } : c
-                                                                );
-                                                                setCategories(updated);
-                                                            }}
-                                                            className="px-3 py-2 bg-slate-600/50 text-white rounded border border-slate-500/50"
-                                                        />
-                                                        <input
-                                                            type="text"
-                                                            value={category.description}
-                                                            onChange={(e) => {
-                                                                const updated = categories.map(c =>
-                                                                    c.id === category.id ? { ...c, description: e.target.value } : c
-                                                                );
-                                                                setCategories(updated);
-                                                            }}
-                                                            className="px-3 py-2 bg-slate-600/50 text-white rounded border border-slate-500/50"
-                                                        />
-                                                        <input
-                                                            type="text"
-                                                            value={category.emailQuery}
-                                                            onChange={(e) => {
-                                                                const updated = categories.map(c =>
-                                                                    c.id === category.id ? { ...c, emailQuery: e.target.value } : c
-                                                                );
-                                                                setCategories(updated);
-                                                            }}
-                                                            className="px-3 py-2 bg-slate-600/50 text-white rounded border border-slate-500/50 font-mono text-sm"
-                                                        />
+                                                    /* Editing Mode */
+                                                    <div className="grid gap-4">
+                                                        <div className="grid md:grid-cols-2 gap-3">
+                                                            <input
+                                                                type="text"
+                                                                value={category.name}
+                                                                placeholder="Nome"
+                                                                onChange={(e) => {
+                                                                    const updated = categories.map(c =>
+                                                                        c.id === category.id ? { ...c, name: e.target.value } : c
+                                                                    );
+                                                                    setCategories(updated);
+                                                                }}
+                                                                className="px-3 py-2 bg-slate-600/50 text-white rounded border border-slate-500/50"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={category.description}
+                                                                placeholder="Descrição"
+                                                                onChange={(e) => {
+                                                                    const updated = categories.map(c =>
+                                                                        c.id === category.id ? { ...c, description: e.target.value } : c
+                                                                    );
+                                                                    setCategories(updated);
+                                                                }}
+                                                                className="px-3 py-2 bg-slate-600/50 text-white rounded border border-slate-500/50"
+                                                            />
+                                                        </div>
+                                                        <div className="grid md:grid-cols-3 gap-3">
+                                                            <input
+                                                                type="text"
+                                                                value={category.fromFilter || ''}
+                                                                placeholder="Remetente (from:)"
+                                                                onChange={(e) => {
+                                                                    const updated = categories.map(c =>
+                                                                        c.id === category.id ? { ...c, fromFilter: e.target.value } : c
+                                                                    );
+                                                                    setCategories(updated);
+                                                                }}
+                                                                className="px-3 py-2 bg-slate-600/50 text-white rounded border border-slate-500/50 font-mono text-sm"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={category.subjectKeywords || ''}
+                                                                placeholder="Palavras no Assunto"
+                                                                onChange={(e) => {
+                                                                    const updated = categories.map(c =>
+                                                                        c.id === category.id ? { ...c, subjectKeywords: e.target.value } : c
+                                                                    );
+                                                                    setCategories(updated);
+                                                                }}
+                                                                className="px-3 py-2 bg-slate-600/50 text-white rounded border border-slate-500/50 font-mono text-sm"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={category.bodyKeywords || ''}
+                                                                placeholder="Palavras no Body"
+                                                                onChange={(e) => {
+                                                                    const updated = categories.map(c =>
+                                                                        c.id === category.id ? { ...c, bodyKeywords: e.target.value } : c
+                                                                    );
+                                                                    setCategories(updated);
+                                                                }}
+                                                                className="px-3 py-2 bg-slate-600/50 text-white rounded border border-slate-500/50 font-mono text-sm"
+                                                            />
+                                                        </div>
                                                         <div className="flex gap-2">
                                                             <button
                                                                 onClick={() => handleUpdate(category.id)}
-                                                                className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-1"
+                                                                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2"
                                                             >
                                                                 <Save className="w-4 h-4" /> Salvar
                                                             </button>
                                                             <button
-                                                                onClick={() => setEditingId(null)}
-                                                                className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700"
+                                                                onClick={() => {
+                                                                    setEditingId(null);
+                                                                    loadCategories();
+                                                                }}
+                                                                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
                                                             >
                                                                 Cancelar
                                                             </button>
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <div className="flex items-center justify-between">
+                                                    /* View Mode */
+                                                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                                                         <div className="flex-1">
                                                             <div className="flex items-center gap-3 mb-2">
                                                                 <h3 className="text-lg font-semibold text-white">{category.name}</h3>
@@ -404,13 +504,46 @@ const CategoryManager: React.FC = () => {
                                                                     {category.isActive ? 'Ativo' : 'Inativo'}
                                                                 </span>
                                                             </div>
-                                                            <p className="text-sm text-gray-400 mb-1">{category.description}</p>
-                                                            <code className="text-xs text-blue-400 bg-slate-900/50 px-2 py-1 rounded">
-                                                                {category.emailQuery}
-                                                            </code>
+                                                            <p className="text-sm text-gray-400 mb-3">{category.description}</p>
+
+                                                            {/* Filter Details */}
+                                                            <div className="grid gap-2 text-sm">
+                                                                {category.fromFilter && (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-gray-500">📧 Remetente:</span>
+                                                                        <code className="text-blue-400 bg-slate-900/50 px-2 py-0.5 rounded">
+                                                                            {category.fromFilter}
+                                                                        </code>
+                                                                    </div>
+                                                                )}
+                                                                {category.subjectKeywords && (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-gray-500">📌 Assunto:</span>
+                                                                        <code className="text-yellow-400 bg-slate-900/50 px-2 py-0.5 rounded">
+                                                                            {category.subjectKeywords}
+                                                                        </code>
+                                                                    </div>
+                                                                )}
+                                                                {category.bodyKeywords && (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-gray-500">📝 Body:</span>
+                                                                        <code className="text-green-400 bg-slate-900/50 px-2 py-0.5 rounded">
+                                                                            {category.bodyKeywords}
+                                                                        </code>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Generated Query */}
+                                                            <div className="mt-3 p-2 bg-slate-900/50 rounded border border-slate-600/30">
+                                                                <span className="text-xs text-gray-500">Query gerada:</span>
+                                                                <code className="block text-xs text-purple-400 mt-1 font-mono break-all">
+                                                                    {category.generatedQuery}
+                                                                </code>
+                                                            </div>
                                                         </div>
 
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-2 lg:flex-col">
                                                             <button
                                                                 onClick={() => handleToggle(category.id)}
                                                                 className={`p-2 rounded-lg ${category.isActive

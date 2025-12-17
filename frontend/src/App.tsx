@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Wifi, WifiOff, AlertCircle } from 'lucide-react';
+import { Activity, Wifi, WifiOff, AlertCircle, Inbox } from 'lucide-react';
 import useRedAlertSocket from './hooks/useRedAlertSocket';
 import AlertOverlay from './components/AlertOverlay';
 import EmailList from './components/EmailList';
 import AlertHistory from './components/AlertHistory';
 import CategoryManager from './components/CategoryManager';
+import ProcessedEmailsModal from './components/ProcessedEmailsModal';
 import type { ConnectionStatus } from './types/alert';
 
 /**
@@ -12,6 +14,7 @@ import type { ConnectionStatus } from './types/alert';
  */
 const App: React.FC = () => {
   const { connectionStatus, latestAlert, clearAlert } = useRedAlertSocket();
+  const [isProcessedEmailsOpen, setIsProcessedEmailsOpen] = useState(false);
 
   const getStatusConfig = (status: ConnectionStatus) => {
     switch (status) {
@@ -56,6 +59,10 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <AlertOverlay alert={latestAlert} onDismiss={clearAlert} />
+      <ProcessedEmailsModal
+        isOpen={isProcessedEmailsOpen}
+        onClose={() => setIsProcessedEmailsOpen(false)}
+      />
 
       <div className="container mx-auto px-4 py-8">
         <motion.header
@@ -89,7 +96,7 @@ const App: React.FC = () => {
             </div>
 
             {connectionStatus === 'connected' && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center mb-4">
                 <p className="text-gray-400 text-lg">Aguardando notificações...</p>
                 <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-slate-700/50 rounded-full">
                   <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
@@ -97,6 +104,18 @@ const App: React.FC = () => {
                 </div>
               </motion.div>
             )}
+
+            {/* Botão sempre visível */}
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={() => setIsProcessedEmailsOpen(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-xl transition-colors border border-blue-500/30 hover:border-blue-500/50"
+                type="button"
+              >
+                <Inbox className="w-5 h-5" />
+                <span className="font-medium">Ver Emails Processados</span>
+              </button>
+            </div>
           </div>
         </motion.div>
 
@@ -136,7 +155,7 @@ const App: React.FC = () => {
           transition={{ delay: 0.8 }}
           className="text-center mt-16 text-gray-500"
         >
-          <p className="text-sm">Powered by Spring Boot + React + Gemini AI</p>
+          <p className="text-sm">© Powered by Marcelo Hernandes da Silva - MSTech IA Solutions</p>
         </motion.footer>
       </div>
     </div>

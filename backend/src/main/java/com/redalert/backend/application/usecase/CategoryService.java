@@ -69,10 +69,12 @@ public class CategoryService {
 
         existing.setName(updatedCategory.getName());
         existing.setDescription(updatedCategory.getDescription());
-        existing.setEmailQuery(updatedCategory.getEmailQuery());
+        existing.setFromFilter(updatedCategory.getFromFilter());
+        existing.setSubjectKeywords(updatedCategory.getSubjectKeywords());
+        existing.setBodyKeywords(updatedCategory.getBodyKeywords());
         existing.setIsActive(updatedCategory.getIsActive());
 
-        log.info("Updating category: {}", existing.getName());
+        log.info("Updating category: {} with query: {}", existing.getName(), existing.buildGmailQuery());
         return categoryRepository.save(existing);
     }
 
