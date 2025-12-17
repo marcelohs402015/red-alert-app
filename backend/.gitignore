@@ -1,0 +1,23 @@
+# Build artifacts
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+
+# Google OAuth tokens
+tokens/
+credentials.json
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

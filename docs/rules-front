@@ -1,0 +1,13 @@
+---
+alwaysApply: false
+---
+- Use TypeScript with strict mode enabled
+- Prefer functional components with hooks over class components
+- Use const for all variables unless let is absolutely necessary
+- Always type props and state explicitly, avoid 'any'
+- Use async/await instead of .then() for promises
+- Implement proper error handling with try-catch blocks
+- Follow naming conventions: PascalCase for components, camelCase for functions
+- Keep components small and single-responsibility
+- Extract reusable logic into custom hooks
+- Use proper TypeScript types/interfaces, never use 'any'
