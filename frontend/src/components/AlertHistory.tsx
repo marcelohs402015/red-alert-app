@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { History, Trash2, Calendar, ExternalLink } from 'lucide-react';
 import { api } from '../services/api';
 import type { ClassAlert } from '../types/alert';
+import ConfirmModal from './ConfirmModal';
 
 /**
  * Component to display alert history.
@@ -10,6 +11,7 @@ import type { ClassAlert } from '../types/alert';
 const AlertHistory: React.FC = () => {
     const [alerts, setAlerts] = useState<ClassAlert[]>([]);
     const [loading, setLoading] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     const loadHistory = async () => {
         setLoading(true);
@@ -23,9 +25,11 @@ const AlertHistory: React.FC = () => {
         }
     };
 
-    const handleClearHistory = async () => {
-        if (!confirm('Tem certeza que deseja limpar todo o histórico?')) return;
+    const handleClearHistory = () => {
+        setIsModalOpen(true);
+    };
 
+    const confirmClear = async () => {
         try {
             await api.clearAlertHistory();
             setAlerts([]);
@@ -153,8 +157,20 @@ const AlertHistory: React.FC = () => {
                     </motion.div>
                 ))}
             </div>
+
+            <ConfirmModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onConfirm={confirmClear}
+                title="Limpar Histórico"
+                message="Tem certeza que deseja limpar todo o histórico de alertas? Esta ação não pode ser desfeita."
+                confirmText="Sim, limpar agora"
+                cancelText="Cancelar"
+                type="danger"
+            />
         </div>
     );
 };
 
 export default AlertHistory;
+

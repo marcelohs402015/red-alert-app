@@ -124,7 +124,15 @@ public class EmailPollingService {
         log.info("Found {} message(s) for category '{}'", messages.size(), category.getName());
 
         int processed = 0;
+        int limitPerCycle = 3; // Limit to avoid AI Rate Limit 429
+
         for (Message message : messages) {
+            if (processed >= limitPerCycle) {
+                log.info("Reached processing limit ({} messages) for this cycle. Remaining will be polled next time.",
+                        limitPerCycle);
+                break;
+            }
+
             // Skip already processed messages
             if (processedMessageIds.contains(message.getId())) {
                 continue;
@@ -222,6 +230,13 @@ public class EmailPollingService {
                     snippet,
                     receivedAt,
                     category);
+
+            // Add a small delay between AI calls to avoid rate limits (429)
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
 
             // Analyze with AI
             ClassAlertDto alert = aiAnalysisPort.analyzeEmailContent(emailBody, receivedAt);
@@ -357,66 +372,61 @@ public class EmailPollingService {
      */
     private String createCalendarEvent(ClassAlertDto alert) {
         try {
-            // 1. Calculate time range (start to end)
+            log.info("📅 Checking for existing calendar events with title: '{}'", alert.title());
+
+            // Define time range (same day)
+            ZonedDateTime startOfDay = alert.date().toLocalDate().atStartOfDay(ZoneId.systemDefault());
+            ZonedDateTime endOfDay = alert.date().toLocalDate().atTime(23, 59, 59).atZone(ZoneId.systemDefault());
+
+            com.google.api.client.util.DateTime timeMin = new com.google.api.client.util.DateTime(
+                    Date.from(startOfDay.toInstant()));
+            com.google.api.client.util.DateTime timeMax = new com.google.api.client.util.DateTime(
+                    Date.from(endOfDay.toInstant()));
+
+            // Search for existing events
+            var events = calendar.events().list("primary")
+                    .setTimeMin(timeMin)
+                    .setTimeMax(timeMax)
+                    .setQ(alert.title())
+                    .execute();
+
+            if (events.getItems() != null && !events.getItems().isEmpty()) {
+                String existingLink = events.getItems().get(0).getHtmlLink();
+                log.info("⚠️ DUPLICATE DETECTED: Event '{}' already exists in calendar. Using link: {}", alert.title(),
+                        existingLink);
+                return existingLink;
+            }
+
+            log.info("🚀 CREATING NEW CALENDAR EVENT: '{}'", alert.title());
+
+            Event event = new Event()
+                    .setSummary(alert.title())
+                    .setDescription(alert.description())
+                    .setLocation(alert.url() != null ? alert.url() : "Online");
+
             Date startDate = Date.from(alert.date().atZone(ZoneId.systemDefault()).toInstant());
             Date endDate = Date.from(alert.date().plusHours(1).atZone(ZoneId.systemDefault()).toInstant());
 
-            // 2. Check for existing events with SAME summary in this time range to avoid
-            // duplicates
-            com.google.api.client.util.DateTime startQuery = new com.google.api.client.util.DateTime(startDate);
-            com.google.api.client.util.DateTime endQuery = new com.google.api.client.util.DateTime(endDate);
-
-            var existingEvents = calendar.events().list("primary")
-                    .setTimeMin(startQuery)
-                    .setTimeMax(endQuery)
-                    .setSingleEvents(true)
-                    .execute();
-
-            if (existingEvents.getItems() != null) {
-                for (Event existing : existingEvents.getItems()) {
-                    if (existing.getSummary() != null && existing.getSummary().equalsIgnoreCase(alert.title())) {
-                        log.info("⚠️ Event already exists in calendar: {} (ID: {}). Skipping creation.", alert.title(),
-                                existing.getId());
-                        return existing.getHtmlLink();
-                    }
-                }
-            }
-
-            // 3. Create new event (only if no duplicate found)
-            Event event = new Event()
-                    .setSummary(alert.title())
-                    .setDescription(alert.description() + "\n\n🔗 Link da aula: " + alert.url())
-                    .setLocation(alert.url());
-
             EventDateTime start = new EventDateTime()
-                    .setDateTime(startQuery)
+                    .setDateTime(new com.google.api.client.util.DateTime(startDate))
                     .setTimeZone(ZoneId.systemDefault().getId());
 
             EventDateTime end = new EventDateTime()
-                    .setDateTime(endQuery)
+                    .setDateTime(new com.google.api.client.util.DateTime(endDate))
                     .setTimeZone(ZoneId.systemDefault().getId());
 
             event.setStart(start);
             event.setEnd(end);
 
-            // Add requestId to deduplicate at API level (best effort)
-            String deduplicationId = Base64.getEncoder()
-                    .encodeToString((alert.title() + alert.date().toString()).getBytes());
-            // Safe truncate if too long (max 1024 chars for id)
-            if (deduplicationId.length() > 50)
-                deduplicationId = deduplicationId.substring(0, 50);
+            Event createdEvent = calendar.events().insert("primary", event).execute();
 
-            Event createdEvent = calendar.events()
-                    .insert("primary", event)
-                    // .setConferenceDataVersion(1) // If we wanted to generate Meet links
-                    .execute();
-
-            log.info("✅ Calendar event created: {} (ID: {})", alert.title(), createdEvent.getId());
+            log.info("✅ SUCCESS: Calendar event created! Link: {}", createdEvent.getHtmlLink());
             return createdEvent.getHtmlLink();
 
-        } catch (IOException e) {
-            log.error("Failed to create/check calendar event", e);
-            throw new CalendarIntegrationException("Failed to create calendar event", e);
+        } catch (Exception e) {
+            log.error("❌ FAILURE: Could not create/check calendar event for '{}'. Error: {}", alert.title(),
+                    e.getMessage());
+            return null;
         }
     }
 
@@ -438,6 +448,13 @@ public class EmailPollingService {
         } catch (IOException e) {
             log.error("Failed to mark message as read: {}", messageId, e);
         }
+    }
+
+    /**
+     * Fallback method when Gmail service is unavailable.
+     */
+    private void fallbackPolling(Throwable throwable) {
+        log.error("Gmail service unavailable, skipping polling cycle. Error: {}", throwable.getMessage());
     }
 
     /**
