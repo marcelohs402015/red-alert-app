@@ -6,11 +6,12 @@ Sistema completo de monitoramento em tempo real que detecta emails importantes d
 
 **Red Alert** é uma aplicação full-stack que:
 
-1. 📧 **Monitora emails** no Gmail a cada minuto
-2. 🤖 **Analisa com IA** (Gemini) para identificar compromissos
-3. 📅 **Cria eventos** automaticamente no Google Calendar
+1. 📧 **Monitora emails** no Gmail a cada minuto (configurável)
+2. 🤖 **Analisa com IA** (Gemini 2.0 Flash) para extrair detalhes de eventos
+3. 📅 **Cria eventos** inteligentes no Google Calendar (com proteção anti-duplicidade)
 4. 🔔 **Envia alertas** em tempo real via WebSocket
-5. 💥 **Exibe overlay** full-screen impossível de ignorar no frontend
+5. 💥 **Exibe overlay** full-screen vermelho impossível de ignorar no frontend
+6. 📜 **Histórico Persistente** de alertas salvos em banco de dados PostgreSQL
 
 ## 🏗️ Arquitetura
 
@@ -50,8 +51,10 @@ Sistema completo de monitoramento em tempo real que detecta emails importantes d
 - **Java 21** (Virtual Threads)
 - **Spring Boot 3.3.6**
 - **Google Gmail API**
-- **Google Calendar API**
-- **Gemini AI**
+- **Google Calendar API** (com lógica de detecção de duplicatas)
+- **Gemini AI 2.0 Flash**
+- **Flyway** (Gerenciamento de banco de dados)
+- **PostgreSQL** (Persistência de histórico e categorias)
 - **WebSocket (STOMP)**
 - **Resilience4j** (Circuit Breaker)
 - **Maven**
@@ -152,28 +155,22 @@ Frontend rodará em: `http://localhost:5173`
 
 ```
 1. POLLING (a cada 60s)
-   └─► Backend busca emails não lidos no Gmail
+   └─► Backend busca emails não lidos no Gmail baseados em Categorias/Filtros
 
-2. ANÁLISE
-   └─► Gemini AI analisa conteúdo do email
-       └─► Identifica: título, data, URL, urgência
+2. ANÁLISE IA (Gemini 2.0 Flash)
+   └─► Extrai: Título, Data/Hora Exata, URL da Reunião e Descrição Rica
 
-3. PROCESSAMENTO
-   └─► Se urgente:
-       ├─► Cria evento no Google Calendar
-       ├─► Envia via WebSocket para frontend
-       └─► Marca email como lido
+3. PROCESSAMENTO & PERSISTÊNCIA
+   ├─► Salva Alerta no Banco de Dados (PostgreSQL)
+   └─► Google Calendar:
+       ├─► Verifica se evento já existe (evita duplicatas)
+       └─► Cria evento com link direto e resumo automático
 
-4. NOTIFICAÇÃO
-   └─► Frontend recebe alerta
+4. NOTIFICAÇÃO (WebSocket)
+   └─► Frontend recebe alerta e FORÇA o estado de Urgência (Red Alert)
        ├─► Toca som de alerta
-       ├─► Exibe overlay full-screen vermelho
-       └─► Animações dramáticas (scale + pulse)
-
-5. AÇÃO DO USUÁRIO
-   └─► Clica "Entrar na Aula" (abre URL)
-       OU
-   └─► Clica "Dispensar" (fecha alerta)
+       ├─► Exibe overlay full-screen vermelho pulsante
+       └─► Botão "VER NO CALENDAR" disponível imediatamente
 ```
 
 ## 🎨 Screenshots
@@ -258,13 +255,12 @@ websocket:
 2. Verifique logs do backend
 3. Verifique se `isUrgent: true` no payload
 
-## 🎯 Próximas Funcionalidades
+## 🎯 Próximas Funcionalidades (Roadmap)
 
-- [ ] Persistência de alertas em banco de dados
-- [ ] Dashboard de histórico de alertas
-- [ ] Configurações personalizadas (filtros, sons)
-- [ ] Notificações desktop (Notification API)
-- [ ] PWA para mobile
+- [ ] **Versão Desktop (Electron/Tauri):** App no System Tray com notificações nativas.
+- [ ] **Serviço Windows:** Rodar backend como serviço oficial (`Services.msc`).
+- [ ] **Deploy Cloud (GKE):** Publicação no Google Kubernetes Engine com IAP (Identity-Aware Proxy).
+- [ ] Configurações personalizadas (filtros dinâmicos via UI, sons customizados)
 - [ ] Integração com Microsoft Teams
 - [ ] Testes automatizados (JUnit + Vitest)
 
