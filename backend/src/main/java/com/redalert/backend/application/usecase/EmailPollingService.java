@@ -244,40 +244,33 @@ public class EmailPollingService {
             log.info("=== ALERT PROCESSING START ===");
             log.info("AI Analysis result: {}", alert != null ? "Found" : "NULL");
 
-            // If AI found an event, we treat it as an ALERT
-            if (alert != null) {
-                log.info("� Alert detected: {}", alert.title());
-
-                // Save to history
-                alertHistoryService.addAlert(alert);
-
-                // Create calendar event
-                String calendarLink = createCalendarEvent(alert);
-
-                // Re-create alert with calendar link AND Force Urgent=true
-                alert = new ClassAlertDto(
-                        alert.title(),
-                        alert.date(),
-                        alert.url(),
-                        alert.description(),
-                        true, // FORCE URGENT so Overlay appears
-                        calendarLink);
-
-                log.info("🗓️ Calendar Event Linked: {}", calendarLink);
-
-            } else {
-                // Should not happen easily as prompt returns null if no event
-                // But if AI returns null, we just create a basic notification
-                log.info("mailbox processing: standard email (no event detected)");
-
+            // 1. If AI failed, create a basic alert object
+            if (alert == null) {
+                log.info("AI analysis returned null, creating basic alert from email data.");
                 alert = new ClassAlertDto(
                         subject,
                         receivedAt,
                         null,
                         String.format("Email from: %s\n\n%s", from, snippet),
-                        true, // FORCE URGENT for all emails
+                        true,
                         null);
             }
+
+            // 2. ALWAYS attempt to create a calendar event for any alert reaching this
+            // point
+            log.info("Processing calendar event for: '{}'", alert.title());
+            String calendarLink = createCalendarEvent(alert);
+
+            // 3. Re-create final alert object with the link and forced urgency
+            alert = new ClassAlertDto(
+                    alert.title(),
+                    alert.date(),
+                    alert.url(),
+                    alert.description(),
+                    true, // FORCE URGENT for all filtered emails
+                    calendarLink);
+
+            log.info("🗓️ Calendar Event Status: {}", calendarLink != null ? "Created/Linked" : "Failed");
 
             // ALWAYS send WebSocket notification (urgent or not)
             log.info("---------- FINAL ALERT DATA TO SEND ----------");

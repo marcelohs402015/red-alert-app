@@ -7,11 +7,12 @@ Sistema completo de monitoramento em tempo real que detecta emails importantes d
 **Red Alert** é uma aplicação full-stack que:
 
 1. 📧 **Monitora emails** no Gmail a cada minuto (configurável)
-2. 🤖 **Analisa com IA** (Gemini 2.0 Flash) para extrair detalhes de eventos
-3. 📅 **Cria eventos** inteligentes no Google Calendar (com proteção anti-duplicidade)
-4. 🔔 **Envia alertas** em tempo real via WebSocket
-5. 💥 **Exibe overlay** full-screen vermelho impossível de ignorar no frontend
-6. 📜 **Histórico Persistente** de alertas salvos em banco de dados PostgreSQL
+2. 🤖 **Analisa com IA Local** (Ollama + Llama3) para extrair detalhes sem custos ou limites de API
+3. ✨ **Backup com Nuvem** (Gemini 2.0 Flash) disponível como alternativa de alta performance
+4. 📅 **Cria eventos** inteligentes no Google Calendar (com proteção anti-duplicidade e logs ricas)
+5. 🔔 **Envia alertas** em tempo real via WebSocket
+6. 💥 **Exibe overlay** full-screen vermelho impossível de ignorar no frontend
+7. 📜 **Histórico Persistente** com confirmações modernas e modais personalizados
 
 ## 🏗️ Arquitetura
 
@@ -38,10 +39,11 @@ Sistema completo de monitoramento em tempo real que detecta emails importantes d
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    EXTERNAL SERVICES                         │
+│                    EXTERNAL & LOCAL SERVICES                 │
+│  • Ollama (Local LLM - Llama 3) - 🛡️ Privacidade Total        │
 │  • Gmail API (leitura de emails)                            │
 │  • Google Calendar API (criação de eventos)                 │
-│  • Gemini AI API (análise de conteúdo)                      │
+│  • Gemini AI API (Cloud AI Alternative)                     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -51,12 +53,13 @@ Sistema completo de monitoramento em tempo real que detecta emails importantes d
 - **Java 21** (Virtual Threads)
 - **Spring Boot 3.3.6**
 - **Google Gmail API**
-- **Google Calendar API** (com lógica de detecção de duplicatas)
-- **Gemini AI 2.0 Flash**
+- **Google Calendar API** (com log visual e proteção anti-duplicidade)
+- **Ollama (Local LLM)** - Modelo Llama 3 (Principal)
+- **Gemini AI 2.0 Flash** (Backup/Alternativa)
 - **Flyway** (Gerenciamento de banco de dados)
 - **PostgreSQL** (Persistência de histórico e categorias)
 - **WebSocket (STOMP)**
-- **Resilience4j** (Circuit Breaker)
+- **Resilience4j** (Circuit Breaker para Gmail, Gemini e Ollama)
 - **Maven**
 
 ### Frontend
@@ -108,10 +111,20 @@ red-alert-app/
 - **Java 21** ou superior
 - **Maven 3.8+**
 - **Node.js 18+** e npm
+- **Ollama** instalado localmente
 - **Conta Google** (Gmail + Calendar)
 - **Gemini API Key** (opcional)
 
-### 1️⃣ Configurar Backend
+### 1️⃣ Configurar IA Local (Ollama)
+
+1. Instale o [Ollama](https://ollama.com/)
+2. No terminal, baixe o modelo Llama 3:
+   ```bash
+   ollama run llama3
+   ```
+3. Mantenha o Ollama rodando (ícone da Lhama no System Tray)
+
+### 2️⃣ Configurar Backend
 
 ```bash
 cd backend
@@ -128,7 +141,7 @@ mvn spring-boot:run
 
 Backend rodará em: `http://localhost:8081`
 
-### 2️⃣ Configurar Frontend
+### 3️⃣ Configurar Frontend
 
 ```bash
 cd frontend
@@ -142,7 +155,7 @@ npm run dev
 
 Frontend rodará em: `http://localhost:5173`
 
-### 3️⃣ Primeira Execução
+### 4️⃣ Primeira Execução
 
 1. **Backend**: Browser abrirá para autenticação Google
 2. Faça login e autorize acesso
@@ -157,8 +170,9 @@ Frontend rodará em: `http://localhost:5173`
 1. POLLING (a cada 60s)
    └─► Backend busca emails não lidos no Gmail baseados em Categorias/Filtros
 
-2. ANÁLISE IA (Gemini 2.0 Flash)
-   └─► Extrai: Título, Data/Hora Exata, URL da Reunião e Descrição Rica
+2. ANÁLISE IA LOCAL (Ollama + Llama 3)
+   └─► Processamento privado no seu hardware.
+   └─► Extrai: Título, Data/Hora Exata, URL da Reunião e Descrição Rica.
 
 3. PROCESSAMENTO & PERSISTÊNCIA
    ├─► Salva Alerta no Banco de Dados (PostgreSQL)
@@ -231,6 +245,11 @@ gemini:
   api:
     key: ${GEMINI_API_KEY:your-api-key}
 
+ollama:
+  api:
+    url: http://localhost:11434/api/chat
+  model: llama3
+
 websocket:
   allowed-origins: http://localhost:3000,http://localhost:5173
 ```
@@ -287,4 +306,4 @@ MIT License
 4. Envie um email de teste
 5. Aguarde o alerta dramático! 🚨
 
-**Desenvolvido com ❤️ por Marcelo Hernandes da Silva usando Java 21, Spring Boot 3, React 19 e Gemini AI**
+**Desenvolvido com ❤️ por Marcelo Hernandes da Silva usando Java 21, Spring Boot 3, React 19, Ollama e Gemini AI**
