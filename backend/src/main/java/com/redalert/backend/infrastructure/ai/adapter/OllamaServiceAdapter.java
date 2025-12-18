@@ -65,23 +65,32 @@ public class OllamaServiceAdapter implements AiAnalysisPort {
 
     private String buildPrompt(String emailBody, LocalDateTime receivedAt) {
         return """
-                You are a smart assistant. Analyze the email and find if there is a class, meeting, or live event.
-                Today's date: %s
-                Extract: title, date (ISO YYYY-MM-DDTHH:mm:ss), url, and a rich description.
-                Return ONLY a JSON object. If nothing is found, return null.
+                Você é um assistente inteligente especializado em analisar e-mails de agendamento de aulas e reuniões.
+                Sua tarefa é extrair informações cruciais de um e-mail em Português.
+                Data de hoje: %s
 
-                Format:
+                Analise o conteúdo do e-mail e extraia os seguintes campos no formato JSON:
+                - title: Um título curto e claro (ex: "Aula de Inglês - Lesson 7").
+                - date: A data e hora exata do evento no formato ISO (YYYY-MM-DDTHH:mm:ss). Se encontrar "06/01/2026 às 08:00", converta para "2026-01-06T08:00:00".
+                - url: O link da reunião (ex: Microsoft Teams, Google Meet, Zoom). Se não houver, deixe null.
+                - description: Um resumo amigável em Português incluindo detalhes como nome do Professor e o que será estudado.
+                - isUrgent: Sempre true para este tipo de e-mail.
+
+                FORMATO DE RESPOSTA (RETORNE APENAS O JSON):
                 {
-                    "title": "Title",
-                    "date": "2025-12-18T19:00:00",
-                    "url": "http://...",
-                    "description": "Short summary",
+                    "title": "...",
+                    "date": "...",
+                    "url": "...",
+                    "description": "...",
                     "isUrgent": true
                 }
 
-                EMAIL CONTENT:
+                Se não encontrar nenhum evento ou data, retorne null.
+
+                CONTEÚDO DO E-MAIL:
                 %s
-                """.formatted(receivedAt.toString(), emailBody);
+                """
+                .formatted(receivedAt.toString(), emailBody);
     }
 
     private String buildRequestBody(String prompt) {

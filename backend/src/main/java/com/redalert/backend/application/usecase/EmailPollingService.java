@@ -321,6 +321,7 @@ public class EmailPollingService {
 
     /**
      * Extracts email body from Gmail message.
+     * Prioritizes plain text and strips HTML if needed.
      */
     private String extractEmailBody(Message message) {
         try {
@@ -328,29 +329,48 @@ public class EmailPollingService {
                 return null;
             }
 
-            // Try to get body from payload
-            if (message.getPayload().getBody() != null &&
-                    message.getPayload().getBody().getData() != null) {
-                return decodeBase64(message.getPayload().getBody().getData());
-            }
-
-            // Try to get from parts (multipart messages)
-            if (message.getPayload().getParts() != null &&
-                    !message.getPayload().getParts().isEmpty()) {
-
-                for (var part : message.getPayload().getParts()) {
-                    if (part.getBody() != null && part.getBody().getData() != null) {
-                        return decodeBase64(part.getBody().getData());
-                    }
+            String body = findBodyPart(message.getPayload(), "text/plain");
+            if (body == null) {
+                body = findBodyPart(message.getPayload(), "text/html");
+                if (body != null) {
+                    body = stripHtml(body);
                 }
             }
 
-            return null;
-
+            return body;
         } catch (Exception e) {
             log.error("Error extracting email body", e);
             return null;
         }
+    }
+
+    private String findBodyPart(com.google.api.services.gmail.model.MessagePart part, String mimeType) {
+        if (mimeType.equalsIgnoreCase(part.getMimeType()) && part.getBody() != null
+                && part.getBody().getData() != null) {
+            return decodeBase64(part.getBody().getData());
+        }
+
+        if (part.getParts() != null) {
+            for (var subPart : part.getParts()) {
+                String result = findBodyPart(subPart, mimeType);
+                if (result != null) {
+                    return result;
+                }
+            }
+        }
+        return null;
+    }
+
+    private String stripHtml(String html) {
+        if (html == null)
+            return null;
+        // Basic HTML stripping
+        return html.replaceAll("<style([\\s\\S]*?)</style>", "")
+                .replaceAll("<script([\\s\\S]*?)</script>", "")
+                .replaceAll("<[^>]*>", " ")
+                .replaceAll("&nbsp;", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     /**
