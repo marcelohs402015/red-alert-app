@@ -135,6 +135,18 @@ const AlertHistory: React.FC = () => {
                                             Abrir link
                                         </a>
                                     )}
+
+                                    {alert.calendarLink && (
+                                        <a
+                                            href={alert.calendarLink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 text-purple-400 hover:text-purple-300"
+                                        >
+                                            <Calendar className="w-3 h-3" />
+                                            Ver evento
+                                        </a>
+                                    )}
                                 </div>
                             </div>
                         </div>

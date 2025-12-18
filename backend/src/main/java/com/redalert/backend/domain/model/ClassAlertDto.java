@@ -18,7 +18,8 @@ public record ClassAlertDto(
         LocalDateTime date,
         String url,
         String description,
-        boolean isUrgent) {
+        boolean isUrgent,
+        String calendarLink) {
     /**
      * Validates that required fields are not null or empty.
      * 

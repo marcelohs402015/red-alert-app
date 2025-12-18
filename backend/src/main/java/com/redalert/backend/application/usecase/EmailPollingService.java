@@ -224,37 +224,57 @@ public class EmailPollingService {
                     category);
 
             // Analyze with AI
-            ClassAlertDto alert = aiAnalysisPort.analyzeEmailContent(emailBody);
+            ClassAlertDto alert = aiAnalysisPort.analyzeEmailContent(emailBody, receivedAt);
 
             log.info("=== ALERT PROCESSING START ===");
             log.info("AI Analysis result: {}", alert != null ? "Found" : "NULL");
 
-            // If no urgent alert found, create a basic notification
-            if (alert == null || !alert.isUrgent()) {
-                log.info("📬 Email received (not urgent): '{}'", subject);
+            // If AI found an event, we treat it as an ALERT
+            if (alert != null) {
+                log.info("� Alert detected: {}", alert.title());
 
-                // Create basic alert for notification
-                alert = new ClassAlertDto(
-                    subject,
-                    receivedAt,
-                    null, // no URL
-                    String.format("Email from: %s\n\n%s", from, snippet),
-                    false // not urgent
-                );
-                log.info("Created basic alert DTO: isUrgent={}", alert.isUrgent());
-            } else {
-                log.info("🚨 Urgent alert detected: {}", alert.title());
-
-                // Save to history (only urgent alerts)
+                // Save to history
                 alertHistoryService.addAlert(alert);
 
-                // Create calendar event (only urgent alerts)
-                createCalendarEvent(alert);
+                // Create calendar event
+                String calendarLink = createCalendarEvent(alert);
+
+                // Re-create alert with calendar link AND Force Urgent=true
+                alert = new ClassAlertDto(
+                        alert.title(),
+                        alert.date(),
+                        alert.url(),
+                        alert.description(),
+                        true, // FORCE URGENT so Overlay appears
+                        calendarLink);
+
+                log.info("🗓️ Calendar Event Linked: {}", calendarLink);
+
+            } else {
+                // Should not happen easily as prompt returns null if no event
+                // But if AI returns null, we just create a basic notification
+                log.info("mailbox processing: standard email (no event detected)");
+
+                alert = new ClassAlertDto(
+                        subject,
+                        receivedAt,
+                        null,
+                        String.format("Email from: %s\n\n%s", from, snippet),
+                        true, // FORCE URGENT for all emails
+                        null);
             }
 
             // ALWAYS send WebSocket notification (urgent or not)
-            log.info(">>> CALLING notificationPort.sendAlert() with alert: title='{}', isUrgent={}",
-                    alert.title(), alert.isUrgent());
+            log.info("---------- FINAL ALERT DATA TO SEND ----------");
+            log.info("Title: {}", alert.title());
+            log.info("Is Urgent: {}", alert.isUrgent());
+            log.info("Date: {}", alert.date());
+            log.info("Link: {}", alert.url());
+            log.info("Calendar Link: {}", alert.calendarLink());
+            log.info("Description: {}", alert.description());
+            log.info("-----------------------------------------------");
+
+            log.info(">>> CALLING notificationPort.sendAlert() with alert: title='{}'", alert.title());
             notificationPort.sendAlert(alert);
             log.info(">>> notificationPort.sendAlert() COMPLETED");
             log.info("=== ALERT PROCESSING END ===");
@@ -332,36 +352,70 @@ public class EmailPollingService {
 
     /**
      * Creates a Google Calendar event for the alert.
+     * 
+     * @return The HTML link to the created event
      */
-    private void createCalendarEvent(ClassAlertDto alert) {
+    private String createCalendarEvent(ClassAlertDto alert) {
         try {
-            Event event = new Event()
-                    .setSummary(alert.title())
-                    .setDescription(alert.description())
-                    .setLocation(alert.url());
-
+            // 1. Calculate time range (start to end)
             Date startDate = Date.from(alert.date().atZone(ZoneId.systemDefault()).toInstant());
             Date endDate = Date.from(alert.date().plusHours(1).atZone(ZoneId.systemDefault()).toInstant());
 
+            // 2. Check for existing events with SAME summary in this time range to avoid
+            // duplicates
+            com.google.api.client.util.DateTime startQuery = new com.google.api.client.util.DateTime(startDate);
+            com.google.api.client.util.DateTime endQuery = new com.google.api.client.util.DateTime(endDate);
+
+            var existingEvents = calendar.events().list("primary")
+                    .setTimeMin(startQuery)
+                    .setTimeMax(endQuery)
+                    .setSingleEvents(true)
+                    .execute();
+
+            if (existingEvents.getItems() != null) {
+                for (Event existing : existingEvents.getItems()) {
+                    if (existing.getSummary() != null && existing.getSummary().equalsIgnoreCase(alert.title())) {
+                        log.info("⚠️ Event already exists in calendar: {} (ID: {}). Skipping creation.", alert.title(),
+                                existing.getId());
+                        return existing.getHtmlLink();
+                    }
+                }
+            }
+
+            // 3. Create new event (only if no duplicate found)
+            Event event = new Event()
+                    .setSummary(alert.title())
+                    .setDescription(alert.description() + "\n\n🔗 Link da aula: " + alert.url())
+                    .setLocation(alert.url());
+
             EventDateTime start = new EventDateTime()
-                    .setDateTime(new com.google.api.client.util.DateTime(startDate))
+                    .setDateTime(startQuery)
                     .setTimeZone(ZoneId.systemDefault().getId());
 
             EventDateTime end = new EventDateTime()
-                    .setDateTime(new com.google.api.client.util.DateTime(endDate))
+                    .setDateTime(endQuery)
                     .setTimeZone(ZoneId.systemDefault().getId());
 
             event.setStart(start);
             event.setEnd(end);
 
+            // Add requestId to deduplicate at API level (best effort)
+            String deduplicationId = Base64.getEncoder()
+                    .encodeToString((alert.title() + alert.date().toString()).getBytes());
+            // Safe truncate if too long (max 1024 chars for id)
+            if (deduplicationId.length() > 50)
+                deduplicationId = deduplicationId.substring(0, 50);
+
             Event createdEvent = calendar.events()
                     .insert("primary", event)
+                    // .setConferenceDataVersion(1) // If we wanted to generate Meet links
                     .execute();
 
-            log.info("Calendar event created: {} (ID: {})", alert.title(), createdEvent.getId());
+            log.info("✅ Calendar event created: {} (ID: {})", alert.title(), createdEvent.getId());
+            return createdEvent.getHtmlLink();
 
         } catch (IOException e) {
-            log.error("Failed to create calendar event", e);
+            log.error("Failed to create/check calendar event", e);
             throw new CalendarIntegrationException("Failed to create calendar event", e);
         }
     }
@@ -387,10 +441,57 @@ public class EmailPollingService {
     }
 
     /**
-     * Fallback method when Gmail service is unavailable.
+     * Clears all calendar events for a specific date.
+     * Useful for cleaning up duplicates or testing data.
      */
-    private void fallbackPolling(Throwable throwable) {
-        log.error("Gmail service unavailable, skipping polling cycle. Error: {}", throwable.getMessage());
+    public int clearCalendarEvents(java.time.LocalDate date) {
+        try {
+            log.info("Starting calendar cleanup for date: {}", date);
+
+            // Define start and end of the day
+            LocalDateTime startOfDay = date.atStartOfDay();
+            LocalDateTime endOfDay = date.atTime(23, 59, 59);
+
+            com.google.api.client.util.DateTime timeMin = new com.google.api.client.util.DateTime(
+                    java.util.Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()));
+
+            com.google.api.client.util.DateTime timeMax = new com.google.api.client.util.DateTime(
+                    java.util.Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
+
+            // List all events for that day
+            var events = calendar.events().list("primary")
+                    .setTimeMin(timeMin)
+                    .setTimeMax(timeMax)
+                    .setSingleEvents(true)
+                    .execute();
+
+            List<Event> items = events.getItems();
+            if (items == null || items.isEmpty()) {
+                log.info("No events found to delete for date {}", date);
+                return 0;
+            }
+
+            log.info("Found {} events to delete on {}", items.size(), date);
+            int deletedCount = 0;
+
+            // Delete each event
+            for (Event event : items) {
+                try {
+                    calendar.events().delete("primary", event.getId()).execute();
+                    log.info("Deleted event: {} (ID: {})", event.getSummary(), event.getId());
+                    deletedCount++;
+                } catch (IOException e) {
+                    log.error("Failed to delete event ID: {}", event.getId(), e);
+                }
+            }
+
+            log.info("Calendar cleanup completed. Deleted {} events.", deletedCount);
+            return deletedCount;
+
+        } catch (IOException e) {
+            log.error("Failed to list calendar events for cleanup", e);
+            throw new CalendarIntegrationException("Failed to clean calendar", e);
+        }
     }
 
     /**

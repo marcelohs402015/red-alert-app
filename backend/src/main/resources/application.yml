@@ -46,12 +46,12 @@ google:
 gemini:
   api:
     key: ${GEMINI_API_KEY}
-    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent
+    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
 
 # Email Polling Configuration
 email:
   polling:
-    fixed-delay: 20000 # 1 minute
+    fixed-delay: 60000 # 1 minute - increased to avoid rate limits
     query: "from:fullcycle.com.br is:unread"
 
 # WebSocket Configuration

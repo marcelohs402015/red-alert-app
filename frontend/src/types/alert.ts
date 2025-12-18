@@ -7,6 +7,7 @@ export interface ClassAlert {
     url: string | null;
     description: string;
     isUrgent: boolean;
+    calendarLink?: string | null;
 }
 
 /**

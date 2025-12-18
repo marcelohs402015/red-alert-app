@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, ExternalLink, X, Clock } from 'lucide-react';
+import { AlertTriangle, ExternalLink, X, Clock, Calendar } from 'lucide-react';
 import type { ClassAlert } from '../types/alert';
 
 interface AlertOverlayProps {
@@ -139,6 +139,18 @@ const AlertOverlay: React.FC<AlertOverlayProps> = ({ alert, onDismiss }) => {
                                 >
                                     <ExternalLink className="w-8 h-8" />
                                     ENTRAR NA AULA
+                                </motion.button>
+                            )}
+
+                            {alert.calendarLink && (
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => window.open(alert.calendarLink!, '_blank')}
+                                    className="flex items-center justify-center gap-3 px-10 py-5 bg-blue-600 text-white text-2xl font-bold rounded-xl shadow-lg hover:bg-blue-700 transition-colors"
+                                >
+                                    <Calendar className="w-8 h-8" />
+                                    VER NO CALENDAR
                                 </motion.button>
                             )}
 

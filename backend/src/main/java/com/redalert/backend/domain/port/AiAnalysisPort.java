@@ -13,10 +13,12 @@ public interface AiAnalysisPort {
     /**
      * Analyzes email content using AI to extract class alert information.
      * 
-     * @param emailBody The raw email body content to analyze
+     * @param emailBody  The raw email body content to analyze
+     * @param receivedAt The timestamp when the email was received (reference for
+     *                   date resolution)
      * @return ClassAlertDto containing extracted information, or null if no alert
      *         found
      * @throws AiAnalysisException if AI service fails
      */
-    ClassAlertDto analyzeEmailContent(String emailBody);
+    ClassAlertDto analyzeEmailContent(String emailBody, java.time.LocalDateTime receivedAt);
 }
