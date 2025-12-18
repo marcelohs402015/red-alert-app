@@ -58,6 +58,12 @@ email:
 websocket:
   allowed-origins: http://localhost:3000,http://localhost:5173
 
+# Ollama Configuration (Local LLM)
+ollama:
+  api:
+    url: http://localhost:11434/api/chat
+  model: llama3
+
 # Resilience4j
 resilience4j:
   circuitbreaker:
@@ -70,6 +76,10 @@ resilience4j:
         slidingWindowSize: 5
         failureRateThreshold: 60
         waitDurationInOpenState: 15s
+      ollamaService:
+        slidingWindowSize: 5
+        failureRateThreshold: 60
+        waitDurationInOpenState: 10s
 
 # Actuator
 management:
