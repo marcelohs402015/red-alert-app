@@ -272,6 +272,9 @@ public class EmailPollingService {
 
             log.info("🗓️ Calendar Event Status: {}", calendarLink != null ? "Created/Linked" : "Failed");
 
+            // 4. Save to history (THIS WAS MISSING!)
+            alertHistoryService.addAlert(alert);
+
             // ALWAYS send WebSocket notification (urgent or not)
             log.info("---------- FINAL ALERT DATA TO SEND ----------");
             log.info("Title: {}", alert.title());

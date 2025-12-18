@@ -98,12 +98,18 @@ export const api = {
     },
 
     /**
-     * Clears alert history.
+     * Gets all processed emails from the database.
      */
     async clearAlertHistory(): Promise<void> {
         const response = await fetch(`${API_BASE_URL}/alerts/history`, {
             method: 'DELETE',
         });
         if (!response.ok) throw new Error('Failed to clear alert history');
+    },
+
+    async getProcessedEmails(): Promise<Email[]> {
+        const response = await fetch(`${API_BASE_URL}/processed-emails`);
+        if (!response.ok) throw new Error('Failed to fetch processed emails');
+        return response.json();
     },
 };

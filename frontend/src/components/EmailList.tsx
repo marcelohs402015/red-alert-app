@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Clock, Loader2 } from 'lucide-react';
+import { Mail, Clock, Loader2, RefreshCw } from 'lucide-react';
 import { api, type Email } from '../services/api';
 
 /**
- * Component to display list of emails from Full Cycle.
+ * Component to display list of emails recently processed by the system.
  */
 const EmailList: React.FC = () => {
     const [emails, setEmails] = useState<Email[]>([]);
@@ -17,16 +17,22 @@ const EmailList: React.FC = () => {
         setError(null);
 
         try {
-            const response = await api.searchFullCycleEmails(20);
-            setEmails(response.emails);
-            setSearchTime(response.searchTimeMs);
+            const data = await api.getProcessedEmails();
+            setEmails(data.slice(0, 20)); // Show last 20
+            setSearchTime(0);
         } catch (err) {
-            setError('Erro ao buscar emails. Verifique se o backend está rodando.');
+            setError('Erro ao buscar emails processados.');
             console.error(err);
         } finally {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        handleSearch();
+        const interval = setInterval(handleSearch, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     const formatDate = (dateString: string): string => {
         const date = new Date(dateString);
@@ -47,7 +53,7 @@ const EmailList: React.FC = () => {
                         Emails Capturados
                     </h2>
                     <p className="text-gray-400 text-sm mt-1">
-                        Emails não lidos encontrados pelo sistema
+                        Últimos emails capturados pelo sistema
                     </p>
                 </div>
 
@@ -56,17 +62,17 @@ const EmailList: React.FC = () => {
                     whileTap={{ scale: 0.95 }}
                     onClick={handleSearch}
                     disabled={loading}
-                    className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-6 py-3 bg-blue-600/20 text-blue-400 font-semibold rounded-lg hover:bg-blue-600/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 border border-blue-500/30"
                 >
                     {loading ? (
                         <>
                             <Loader2 className="w-5 h-5 animate-spin" />
-                            Buscando...
+                            Atualizando...
                         </>
                     ) : (
                         <>
-                            <Mail className="w-5 h-5" />
-                            Buscar Emails
+                            <RefreshCw className="w-5 h-5" />
+                            Atualizar
                         </>
                     )}
                 </motion.button>
