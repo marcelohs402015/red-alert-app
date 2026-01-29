@@ -15,8 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 /**
  * Adapter implementation for Gemini AI analysis.
@@ -33,7 +31,7 @@ public class GeminiServiceAdapter implements AiAnalysisPort {
     private final WebClient.Builder webClientBuilder;
     private final ObjectMapper objectMapper;
 
-    @Value("${gemini.api.key}")
+    @Value("${gemini.api.key:}")
     private String apiKey;
 
     @Value("${gemini.api.url}")
@@ -45,6 +43,10 @@ public class GeminiServiceAdapter implements AiAnalysisPort {
     @Override
     @CircuitBreaker(name = "geminiService", fallbackMethod = "fallbackAnalysis")
     public ClassAlertDto analyzeEmailContent(String emailBody, LocalDateTime receivedAt) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("GEMINI_API_KEY not configured. Gemini AI analysis disabled.");
+            return null;
+        }
         try {
             log.info("Sending email content to Gemini for analysis. Reference date: {}", receivedAt);
 

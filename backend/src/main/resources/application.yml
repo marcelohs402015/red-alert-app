@@ -4,7 +4,7 @@ spring:
   
   # Database Configuration
   datasource:
-    url: jdbc:postgresql://localhost:5433/redalert
+    url: jdbc:postgresql://localhost:5432/redalert
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
@@ -42,10 +42,10 @@ google:
   tokens:
     directory: tokens
 
-# Gemini AI Configuration
+# Gemini AI Configuration (key optional: set GEMINI_API_KEY env var to enable)
 gemini:
   api:
-    key: ${GEMINI_API_KEY}
+    key: ${GEMINI_API_KEY:}
     url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
 
 # Email Polling Configuration
