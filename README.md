@@ -76,11 +76,11 @@ Sistema completo de monitoramento em tempo real que detecta emails importantes d
 ```
 red-alert-app/
 ├── backend/                    # Java Spring Boot
-│   ├── src/main/java/com/pulsar/backend/
-│   │   ├── domain/            # Camada de Domínio
-│   │   ├── application/       # Casos de Uso
-│   │   ├── infrastructure/    # Adaptadores
-│   │   └── presentation/      # Controllers REST
+│   ├── src/main/java/com/redalert/backend/
+│   │   ├── domain/             # Camada de Domínio
+│   │   ├── application/        # Casos de Uso
+│   │   ├── infrastructure/      # Adaptadores
+│   │   └── presentation/       # Controllers REST
 │   ├── pom.xml
 │   ├── README.md
 │   ├── ARCHITECTURE.md
@@ -88,20 +88,16 @@ red-alert-app/
 │
 ├── frontend/                   # React + TypeScript
 │   ├── src/
-│   │   ├── components/        # Componentes React
-│   │   ├── hooks/             # Custom hooks
-│   │   ├── types/             # TypeScript types
+│   │   ├── components/         # Componentes React
+│   │   ├── hooks/               # Custom hooks
+│   │   ├── types/               # TypeScript types
 │   │   ├── App.tsx
 │   │   └── main.tsx
 │   ├── package.json
 │   └── README.md
 │
+├── docker-compose.yml          # PostgreSQL (porta 5432)
 └── docs/                       # Documentação
-    ├── persona-front
-    ├── persona-java
-    ├── project-arch
-    ├── rules-front
-    └── rules-java
 ```
 
 ## 🔧 Setup Completo
@@ -111,11 +107,22 @@ red-alert-app/
 - **Java 21** ou superior
 - **Maven 3.8+**
 - **Node.js 18+** e npm
-- **Ollama** instalado localmente
+- **Docker** (para PostgreSQL)
 - **Conta Google** (Gmail + Calendar)
-- **Gemini API Key** (opcional)
+- **Ollama** (opcional, para IA local)
+- **Gemini API Key** (opcional; sem ela o backend sobe, mas análise por Gemini fica desabilitada)
 
-### 1️⃣ Configurar IA Local (Ollama)
+### 1️⃣ Subir o banco de dados (Docker)
+
+Na raiz do projeto:
+
+```bash
+docker-compose up -d
+```
+
+Isso sobe o **PostgreSQL** na porta **5432** (banco `redalert`, user/senha `postgres`). Não é necessário PgAdmin.
+
+### 2️⃣ Configurar IA Local (Ollama) – opcional
 
 1. Instale o [Ollama](https://ollama.com/)
 2. No terminal, baixe o modelo Llama 3:
@@ -124,43 +131,45 @@ red-alert-app/
    ```
 3. Mantenha o Ollama rodando (ícone da Lhama no System Tray)
 
-### 2️⃣ Configurar Backend
+### 3️⃣ Configurar Backend
 
 ```bash
 cd backend
 
-# Configurar Google OAuth2 (ver backend/SETUP.md)
-# 1. Criar projeto no Google Cloud Console
-# 2. Ativar Gmail API e Calendar API
-# 3. Baixar credentials.json para src/main/resources/
+# 1. Google OAuth2 (ver backend/SETUP.md)
+#    - Criar projeto no Google Cloud Console
+#    - Ativar Gmail API e Calendar API
+#    - Baixar credentials.json para src/main/resources/
 
-# Compilar e executar
+# 2. (Opcional) Definir API key do Gemini para análise em nuvem
+#    PowerShell:
+$env:GEMINI_API_KEY="sua-chave-aqui"
+
+# 3. Compilar e executar
 mvn clean install
 mvn spring-boot:run
 ```
 
-Backend rodará em: `http://localhost:8081`
+Backend rodará em: **`http://localhost:8086`**  
+Swagger UI: **`http://localhost:8086/swagger-ui.html`**
 
-### 3️⃣ Configurar Frontend
+### 4️⃣ Configurar Frontend
 
 ```bash
 cd frontend
 
-# Instalar dependências
 npm install
-
-# Executar em desenvolvimento
 npm run dev
 ```
 
-Frontend rodará em: `http://localhost:5173`
+Frontend rodará em: **`http://localhost:5173`**
 
-### 4️⃣ Primeira Execução
+### 5️⃣ Primeira Execução
 
-1. **Backend**: Browser abrirá para autenticação Google
-2. Faça login e autorize acesso
-3. Token salvo em `backend/tokens/`
-4. **Frontend**: Conectará automaticamente ao WebSocket
+1. **Backend**: o navegador abrirá para autenticação Google (Gmail + Calendar).
+2. Faça login e autorize o acesso.
+3. O token é salvo em `backend/tokens/`.
+4. **Frontend**: conecta automaticamente ao WebSocket em `http://localhost:8086/ws-red-alert`.
 
 ## 🎯 Como Funciona
 
@@ -210,9 +219,12 @@ Frontend rodará em: `http://localhost:5173`
 4. Aguarde até 1 minuto (polling)
 5. Alerta aparecerá no frontend
 
-### Opção 2: Simulação Manual
+### Opção 2: Simulação manual (API)
 
-No backend, você pode criar um endpoint de teste para enviar alertas diretamente.
+```powershell
+# Alerta de teste
+Invoke-RestMethod -Uri "http://localhost:8086/api/v1/alerts/simulate/test" -Method POST
+```
 
 ## 📚 Documentação Detalhada
 
@@ -234,39 +246,44 @@ No backend, você pode criar um endpoint de teste para enviar alertas diretament
 
 ## 🔒 Variáveis de Ambiente
 
-### Backend (`application.yml`)
+### Backend
 
-```yaml
-google:
-  credentials:
-    file-path: classpath:credentials.json
+| Variável          | Obrigatória | Descrição |
+|-------------------|-------------|-----------|
+| `GEMINI_API_KEY`  | Não         | API key do Google AI (Gemini). Se não definida, o backend sobe normalmente e a análise por Gemini fica desabilitada. |
 
-gemini:
-  api:
-    key: ${GEMINI_API_KEY:your-api-key}
-
-ollama:
-  api:
-    url: http://localhost:11434/api/chat
-  model: llama3
-
-websocket:
-  allowed-origins: http://localhost:3000,http://localhost:5173
+**Definir no PowerShell (antes de `mvn spring-boot:run`):**
+```powershell
+$env:GEMINI_API_KEY="sua-chave-aqui"
 ```
+
+O restante (Google OAuth2, Ollama, WebSocket) é lido do `application.yml`. Banco: `localhost:5432/redalert` (via Docker Compose).
 
 ## 🚨 Troubleshooting
 
+### Backend não inicia (GEMINI_API_KEY)
+
+O backend **não exige** mais a variável. Se quiser usar o Gemini, defina antes de rodar:
+```powershell
+$env:GEMINI_API_KEY="sua-chave"; mvn spring-boot:run
+```
+
 ### Backend não conecta ao Gmail
 
-1. Verifique `credentials.json` em `src/main/resources/`
-2. Delete pasta `tokens/` e reautentique
-3. Verifique se APIs estão ativadas no Google Cloud Console
+1. Verifique `credentials.json` em `backend/src/main/resources/`
+2. Delete a pasta `tokens/` e rode de novo para reautenticar
+3. Confirme no Google Cloud Console se Gmail API e Calendar API estão ativadas
+
+### Backend não conecta ao banco
+
+1. Suba o PostgreSQL: `docker-compose up -d`
+2. Banco: `localhost:5432`, database `redalert`, user/senha `postgres`
 
 ### Frontend não recebe alertas
 
-1. Verifique se backend está rodando (porta 8081)
-2. Abra console do browser: deve mostrar "✅ Connected"
-3. Verifique CORS no backend
+1. Confirme se o backend está rodando em **porta 8086**
+2. No console do browser deve aparecer algo como "Connected" ao WebSocket
+3. CORS está configurado para `http://localhost:5173` e `http://localhost:3000`
 
 ### Alerta não aparece
 
@@ -300,10 +317,12 @@ MIT License
 
 ## 🎉 Pronto para Usar!
 
-1. Configure Google OAuth2
-2. Execute backend: `mvn spring-boot:run`
-3. Execute frontend: `npm run dev`
-4. Envie um email de teste
-5. Aguarde o alerta dramático! 🚨
+1. Suba o banco: `docker-compose up -d`
+2. Configure Google OAuth2 (credentials em `backend/src/main/resources/`)
+3. (Opcional) Defina `GEMINI_API_KEY` se quiser análise com Gemini
+4. Execute o backend: `cd backend && mvn spring-boot:run`
+5. Execute o frontend: `cd frontend && npm run dev`
+6. Envie um email de teste ou use o endpoint de simulação
+7. Aguarde o alerta no overlay! 🚨
 
-**Desenvolvido com ❤️ por Marcelo Hernandes da Silva usando Java 21, Spring Boot 3, React 19, Ollama e Gemini AI**
+**Desenvolvido com ❤️ por Marcelo Hernandes da Silva — MSTech IA Solutions**

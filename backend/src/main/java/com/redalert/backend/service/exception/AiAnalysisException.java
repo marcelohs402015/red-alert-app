@@ -1,8 +1,7 @@
-package com.redalert.backend.application.exception;
+package com.redalert.backend.service.exception;
 
 /**
- * Custom exception for AI analysis failures.
- * Follows Clean Code principle of meaningful exception names.
+ * Thrown when AI analysis fails (e.g. Gemini/Ollama unavailable).
  */
 public class AiAnalysisException extends RuntimeException {
 

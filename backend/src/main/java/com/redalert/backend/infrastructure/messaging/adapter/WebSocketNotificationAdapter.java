@@ -1,23 +1,20 @@
 package com.redalert.backend.infrastructure.messaging.adapter;
 
 import com.redalert.backend.domain.model.ClassAlertDto;
-import com.redalert.backend.domain.port.NotificationPort;
+import com.redalert.backend.service.NotificationSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Adapter implementation for WebSocket notifications.
- * Implements NotificationPort using Spring's SimpMessagingTemplate.
- * 
- * This adapter broadcasts alerts to all connected WebSocket clients
- * subscribed to /topic/alerts.
+ * WebSocket notification implementation (Adapter – GoF).
+ * Broadcasts alerts to /topic/alerts.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class WebSocketNotificationAdapter implements NotificationPort {
+public class WebSocketNotificationAdapter implements NotificationSender {
 
     private final SimpMessagingTemplate messagingTemplate;
 

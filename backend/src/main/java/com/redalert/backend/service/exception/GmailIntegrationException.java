@@ -1,7 +1,7 @@
-package com.redalert.backend.application.exception;
+package com.redalert.backend.service.exception;
 
 /**
- * Custom exception for Gmail integration failures.
+ * Thrown when Gmail integration fails.
  */
 public class GmailIntegrationException extends RuntimeException {
 

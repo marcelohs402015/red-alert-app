@@ -1,6 +1,6 @@
 package com.redalert.backend.presentation.controller;
 
-import com.redalert.backend.application.usecase.CategoryService;
+import com.redalert.backend.service.CategoryService;
 import com.redalert.backend.domain.model.Category;
 import com.redalert.backend.presentation.dto.CategoryRequest;
 import com.redalert.backend.presentation.dto.CategoryResponse;

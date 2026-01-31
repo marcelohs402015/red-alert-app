@@ -1,8 +1,8 @@
-package com.redalert.backend.application.usecase;
+package com.redalert.backend.service;
 
 import com.redalert.backend.domain.model.Category;
 import com.redalert.backend.domain.model.ProcessedEmail;
-import com.redalert.backend.domain.repository.ProcessedEmailRepository;
+import com.redalert.backend.infrastructure.persistence.ProcessedEmailRepository;
 import com.redalert.backend.presentation.dto.ProcessedEmailResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Service for managing processed emails.
+ * Application service for processed emails (save, list, delete).
  */
 @Service
 @RequiredArgsConstructor
@@ -22,17 +22,6 @@ public class ProcessedEmailService {
 
     private final ProcessedEmailRepository processedEmailRepository;
 
-    /**
-     * Saves a processed email if it doesn't already exist.
-     *
-     * @param emailId     Gmail message ID
-     * @param fromAddress Email sender
-     * @param subject     Email subject
-     * @param snippet     Email snippet
-     * @param receivedAt  When email was received
-     * @param category    Category that matched (optional)
-     * @return The saved or existing ProcessedEmail
-     */
     @Transactional
     public ProcessedEmail saveIfNotExists(
             String emailId,
@@ -51,22 +40,23 @@ public class ProcessedEmailService {
                             .receivedAt(receivedAt)
                             .category(category)
                             .build();
-
                     log.info("Saving processed email: {} - {}", emailId, subject);
                     return processedEmailRepository.save(email);
                 });
     }
 
-    /**
-     * Checks if an email has already been processed.
-     */
     public boolean isAlreadyProcessed(String emailId) {
         return processedEmailRepository.existsByEmailId(emailId);
     }
 
     /**
-     * Gets all processed emails.
+     * Returns a processed email by ID for use in simulate/alert flows.
      */
+    public ProcessedEmail getProcessedEmailById(Long id) {
+        return processedEmailRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Processed email not found with id: " + id));
+    }
+
     public List<ProcessedEmailResponse> getAllProcessedEmails() {
         return processedEmailRepository.findAllByOrderByProcessedAtDesc()
                 .stream()
@@ -74,9 +64,6 @@ public class ProcessedEmailService {
                 .toList();
     }
 
-    /**
-     * Gets processed emails by category.
-     */
     public List<ProcessedEmailResponse> getProcessedEmailsByCategory(Long categoryId) {
         return processedEmailRepository.findByCategoryIdOrderByProcessedAtDesc(categoryId)
                 .stream()
@@ -84,37 +71,24 @@ public class ProcessedEmailService {
                 .toList();
     }
 
-    /**
-     * Deletes a processed email by ID.
-     */
     @Transactional
     public void deleteProcessedEmail(Long id) {
         ProcessedEmail email = processedEmailRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Processed email not found with id: " + id));
-
         log.info("Deleting processed email: {} - {}", email.getEmailId(), email.getSubject());
         processedEmailRepository.delete(email);
     }
 
-    /**
-     * Deletes all processed emails.
-     */
     @Transactional
     public void deleteAllProcessedEmails() {
         log.info("Deleting all processed emails");
         processedEmailRepository.deleteAll();
     }
 
-    /**
-     * Gets the count of processed emails.
-     */
     public long getProcessedEmailCount() {
         return processedEmailRepository.count();
     }
 
-    /**
-     * Converts entity to response DTO.
-     */
     private ProcessedEmailResponse toResponse(ProcessedEmail email) {
         return new ProcessedEmailResponse(
                 email.getId(),

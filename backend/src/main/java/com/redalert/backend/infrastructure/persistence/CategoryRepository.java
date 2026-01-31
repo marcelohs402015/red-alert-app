@@ -1,4 +1,4 @@
-package com.redalert.backend.domain.repository;
+package com.redalert.backend.infrastructure.persistence;
 
 import com.redalert.backend.domain.model.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,23 +8,14 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Repository for Category entity.
+ * Data access for Category entity (JPA).
  */
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
 
-    /**
-     * Finds all active categories.
-     */
     List<Category> findByIsActiveTrue();
 
-    /**
-     * Finds category by name.
-     */
     Optional<Category> findByName(String name);
 
-    /**
-     * Checks if category with name exists.
-     */
     boolean existsByName(String name);
 }

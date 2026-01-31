@@ -1,7 +1,7 @@
-package com.redalert.backend.application.exception;
+package com.redalert.backend.service.exception;
 
 /**
- * Custom exception for Google Calendar integration failures.
+ * Thrown when Google Calendar integration fails.
  */
 public class CalendarIntegrationException extends RuntimeException {
 

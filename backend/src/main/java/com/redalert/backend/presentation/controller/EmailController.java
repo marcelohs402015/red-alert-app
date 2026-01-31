@@ -1,8 +1,8 @@
 package com.redalert.backend.presentation.controller;
 
-import com.redalert.backend.application.usecase.EmailPollingService;
 import com.redalert.backend.domain.model.EmailDto;
-import com.redalert.backend.domain.port.GmailPort;
+import com.redalert.backend.service.EmailPollingService;
+import com.redalert.backend.service.GmailClient;
 import com.redalert.backend.presentation.dto.EmailResponse;
 import com.redalert.backend.presentation.dto.EmailSearchResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,7 +27,7 @@ import java.util.Map;
 @Tag(name = "Emails", description = "Operações de busca e consulta de emails")
 public class EmailController {
 
-    private final GmailPort gmailPort;
+    private final GmailClient gmailClient;
     private final EmailPollingService emailPollingService;
 
     /**
@@ -95,7 +95,7 @@ public class EmailController {
 
         log.info("Searching emails with query: {}", query);
 
-        List<EmailDto> emails = gmailPort.searchEmails(query, maxResults);
+        List<EmailDto> emails = gmailClient.searchEmails(query, maxResults);
         List<EmailResponse> emailResponses = emails.stream()
                 .map(EmailResponse::fromDomain)
                 .toList();

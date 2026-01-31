@@ -1,6 +1,6 @@
 package com.redalert.backend.presentation.controller;
 
-import com.redalert.backend.application.usecase.ProcessedEmailService;
+import com.redalert.backend.service.ProcessedEmailService;
 import com.redalert.backend.presentation.dto.ProcessedEmailResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

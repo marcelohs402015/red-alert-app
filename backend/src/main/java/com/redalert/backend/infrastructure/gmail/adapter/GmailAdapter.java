@@ -4,9 +4,9 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePartHeader;
-import com.redalert.backend.application.exception.GmailIntegrationException;
 import com.redalert.backend.domain.model.EmailDto;
-import com.redalert.backend.domain.port.GmailPort;
+import com.redalert.backend.service.GmailClient;
+import com.redalert.backend.service.exception.GmailIntegrationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,12 +20,12 @@ import java.util.List;
 
 /**
  * Adapter implementation for Gmail operations.
- * Implements GmailPort using Google Gmail API.
+ * Gmail operations implementation (Adapter – GoF).
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class GmailAdapter implements GmailPort {
+public class GmailAdapter implements GmailClient {
 
     private final Gmail gmail;
     private static final String USER_ID = "me";

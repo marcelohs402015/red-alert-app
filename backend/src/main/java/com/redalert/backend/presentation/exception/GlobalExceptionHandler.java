@@ -1,8 +1,8 @@
 package com.redalert.backend.presentation.exception;
 
-import com.redalert.backend.application.exception.AiAnalysisException;
-import com.redalert.backend.application.exception.CalendarIntegrationException;
-import com.redalert.backend.application.exception.GmailIntegrationException;
+import com.redalert.backend.service.exception.AiAnalysisException;
+import com.redalert.backend.service.exception.CalendarIntegrationException;
+import com.redalert.backend.service.exception.GmailIntegrationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

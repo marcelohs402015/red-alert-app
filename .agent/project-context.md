@@ -9,10 +9,11 @@ Sistema de monitoramento de emails em tempo real que detecta alertas urgentes (c
 ## 🏗️ Arquitetura
 
 ### Backend (Java 21 + Spring Boot 3)
-- **Arquitetura Hexagonal** (Ports & Adapters)
+- **Arquitetura em camadas** (Presentation → Service → Domain; Infrastructure implementa contratos do Service)
+- **SOLID, Clean Code, GoF** (Strategy: AiAnalyzer; Adapter: GmailClient, NotificationSender)
 - **Banco de dados:** PostgreSQL
 - **Migrations:** Flyway (V1 e V2)
-- **Integrações:** Gmail API, Google Calendar API, Gemini AI
+- **Integrações:** Gmail API, Google Calendar API, Gemini/Ollama AI
 - **WebSocket:** STOMP para notificações em tempo real
 
 ### Frontend (React 19 + TypeScript + Vite 7)
@@ -20,43 +21,26 @@ Sistema de monitoramento de emails em tempo real que detecta alertas urgentes (c
 - **Ícones:** Lucide React
 - **WebSocket:** STOMP.js para receber alertas
 
-## 📁 Estrutura do Backend
+## 📁 Estrutura do Backend (Layered)
 
 ```
 backend/src/main/java/com/redalert/backend/
-├── application/usecase/
-│   ├── AlertHistoryService.java    # Histórico de alertas
-│   ├── CategoryService.java        # CRUD de categorias
-│   ├── EmailPollingService.java    # Polling de emails (cada 60s)
-│   └── ProcessedEmailService.java  # Emails processados
-├── domain/
-│   ├── model/
-│   │   ├── Alert.java              # Entidade de alerta
-│   │   ├── Category.java           # Entidade de categoria
-│   │   ├── ClassAlertDto.java      # DTO de alerta
-│   │   └── ProcessedEmail.java     # Entidade de email processado
-│   ├── port/
-│   │   ├── AiAnalysisPort.java     # Interface para IA
-│   │   └── NotificationPort.java   # Interface para notificações
-│   └── repository/
-│       ├── AlertRepository.java
-│       ├── CategoryRepository.java
-│       └── ProcessedEmailRepository.java
+├── domain/model/
+│   ├── Alert.java, Category.java, ProcessedEmail.java
+│   ├── ClassAlertDto.java, EmailDto.java
+├── service/
+│   ├── AiAnalyzer.java, GmailClient.java, NotificationSender.java  # Interfaces
+│   ├── AlertHistoryService, CategoryService, EmailPollingService, ProcessedEmailService
+│   └── exception/  # AiAnalysisException, CalendarIntegrationException, GmailIntegrationException
 ├── infrastructure/
-│   ├── ai/GeminiAiAdapter.java     # Integração Gemini AI
-│   ├── config/                      # Configurações (CORS, Google, WebSocket)
-│   └── websocket/WebSocketNotificationAdapter.java
+│   ├── persistence/  # AlertRepository, CategoryRepository, ProcessedEmailRepository (JPA)
+│   ├── gmail/adapter/GmailAdapter.java      # implements GmailClient
+│   ├── ai/adapter/   # GeminiServiceAdapter, OllamaServiceAdapter (implement AiAnalyzer)
+│   ├── messaging/adapter/WebSocketNotificationAdapter.java  # implements NotificationSender
+│   └── config/       # CORS, Google, WebClient, WebSocket
 └── presentation/
-    ├── controller/
-    │   ├── AlertController.java     # /api/v1/alerts
-    │   ├── CategoryController.java  # /api/v1/categories
-    │   ├── EmailController.java     # /api/v1/emails
-    │   └── ProcessedEmailController.java  # /api/v1/processed-emails
-    └── dto/
-        ├── AlertResponse.java
-        ├── CategoryRequest.java
-        ├── CategoryResponse.java
-        └── ProcessedEmailResponse.java
+    ├── controller/   # Alert, Category, Email, ProcessedEmail, Health
+    └── dto/          # Request/Response DTOs
 ```
 
 ## 📁 Estrutura do Frontend

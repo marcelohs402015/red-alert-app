@@ -3,9 +3,9 @@ package com.redalert.backend.infrastructure.ai.adapter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.redalert.backend.application.exception.AiAnalysisException;
 import com.redalert.backend.domain.model.ClassAlertDto;
-import com.redalert.backend.domain.port.AiAnalysisPort;
+import com.redalert.backend.service.AiAnalyzer;
+import com.redalert.backend.service.exception.AiAnalysisException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,18 +15,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
- * Adapter implementation for Gemini AI analysis.
- * Implements AiAnalysisPort using Google's Gemini API.
- * 
- * This adapter uses Gemini Pro to analyze email text and extract structured
- * event data.
+ * Gemini AI analysis implementation (Strategy/Adapter – GoF).
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class GeminiServiceAdapter implements AiAnalysisPort {
+public class GeminiServiceAdapter implements AiAnalyzer {
 
     private final WebClient.Builder webClientBuilder;
     private final ObjectMapper objectMapper;
@@ -48,7 +45,8 @@ public class GeminiServiceAdapter implements AiAnalysisPort {
             return null;
         }
         try {
-            log.info("Sending email content to Gemini for analysis. Reference date: {}", receivedAt);
+            log.info("[LLM] Enviando para Gemini: bodyLength={}, receivedAt={}, bodyPreview={}", emailBody.length(), receivedAt,
+                    emailBody.length() > 200 ? emailBody.substring(0, 200).replace("\n", " ") + "..." : emailBody.replace("\n", " "));
 
             String prompt = buildPrompt(emailBody, receivedAt);
             String requestBody = buildRequestBody(prompt);
@@ -63,10 +61,16 @@ public class GeminiServiceAdapter implements AiAnalysisPort {
                     .bodyToMono(String.class)
                     .block(); // Blocking is acceptable here as we are in a synchronous polling loop
 
-            return parseGeminiResponse(jsonResponse);
+            ClassAlertDto result = parseGeminiResponse(jsonResponse);
+            if (result == null) {
+                log.warn("[LLM] Gemini retornou null (sem evento extraído ou resposta inválida). Resposta bruta (trecho): {}", jsonResponse != null && jsonResponse.length() > 300 ? jsonResponse.substring(0, 300) + "..." : jsonResponse);
+            } else {
+                log.info("[LLM] Gemini extraiu evento: title='{}', date='{}', isUrgent={}", result.title(), result.date(), result.isUrgent());
+            }
+            return result;
 
         } catch (Exception e) {
-            log.error("Error analyzing email with Gemini", e);
+            log.error("[LLM] Erro ao analisar email com Gemini", e);
             throw new AiAnalysisException("Failed to analyze email content", e);
         }
     }
@@ -80,36 +84,66 @@ public class GeminiServiceAdapter implements AiAnalysisPort {
         // Escape special chars
         cleanBody = cleanBody.replace("\"", "'").replace("\n", " ");
 
+        // Format receivedAt in a more readable way for the LLM
+        String todayDate = receivedAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        String todayTime = receivedAt.format(DateTimeFormatter.ofPattern("HH:mm"));
+        String todayISO = receivedAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        
         return """
-                You are a smart assistant for a student. Your job is to analyze notification emails from school/courses and identify if there is a scheduled class, meeting, or live event.
+                You are a smart assistant specialized in analyzing Portuguese emails for scheduled classes, mentorias, and meetings.
 
-                Current Context:
-                - Today's Date (Email Received): %s
+                CRITICAL CONTEXT:
+                - TODAY's Date (when email was received): %s at %s
+                - TODAY's Date in ISO format: %s
                 - Timezone: America/Sao_Paulo (UTC-3)
 
-                Instructions:
-                1. Analyze the email text below.
-                2. If it mentions a class, meeting, live session, or webinar (e.g., "AULA AO VIVO", "MENTORIA", "REUNIÃO"), extract the details.
-                3. Resolve relative dates (e.g., "tomorrow", "amanhã", "next monday") based on TODAY'S DATE.
-                4. Extract the LINK/URL if available.
-                5. Create a RICH DESCRIPTION that summarizes the email content, key topics, and instructions. This description will be used as the calendar event body.
-                6. Return ONLY a valid JSON object. Do not include markdown formatting like ```json.
+                CRITICAL EXTRACTION INSTRUCTIONS:
 
-                JSON Structure:
+                1. EVENT DATE AND TIME:
+                   - If email says "Hoje" or "hoje" (Today) → use TODAY's date (%s)
+                   - If says "Amanhã" or "amanhã" (Tomorrow) → add 1 day to TODAY
+                   - If says "29/01" or "29/01/2026" → convert to ISO: 2026-01-29
+                   - If says "às 19h00" or "19:00" → use that time
+                   - Required ISO format: YYYY-MM-DDTHH:mm:ss (example: 2026-01-29T19:00:00)
+                   - If no explicit date found, use TODAY's date
+                   - If no time found, default to 19:00
+
+                2. ACCESS LINK (HIGHEST PRIORITY):
+                   - Look for "Link de acesso", "link", "acesse", "https://", "http://"
+                   - Extract the full link (e.g., https://fcycle.co/m29-01)
+                   - Put in "url" field. The link is MORE IMPORTANT than any email text.
+
+                3. TITLE:
+                   - Short, clear event title (e.g., "Mentoria ao vivo - Full Cycle")
+
+                4. DESCRIPTION (FOCUS ON LINK):
+                   - If there is an access link: description MUST be basically the link. Example: "Link de acesso: https://fcycle.co/m29-01"
+                   - Do NOT fill with long email context. The class link is what matters.
+                   - If no link, then use a very short summary (1 line)
+
+                5. URGENCY:
+                   - Always true for live classes, mentorias, and scheduled meetings
+
+                RESPONSE FORMAT (RETURN ONLY JSON, NO markdown):
                 {
-                    "title": "Short title of the event",
-                    "date": "ISO 8601 format (YYYY-MM-DDTHH:mm:ss)",
-                    "url": "https://...",
-                    "description": "Detailed summary of agenda/topics/instructions from email body",
+                    "title": "Event title",
+                    "date": "2026-01-29T19:00:00",
+                    "url": "https://class-link.com or null",
+                    "description": "Link de acesso: https://... (if link exists; otherwise 1-line summary)",
                     "isUrgent": true
                 }
 
-                If NO relevant event is found, return null.
+                DATE CONVERSION EXAMPLES:
+                - "Hoje, 29/01, às 19h00" → date: "2026-01-29T19:00:00" (if today is 29/01/2026)
+                - "Amanhã às 20:00" → date: "2026-01-30T20:00:00" (if today is 29/01/2026)
+                - "30/01/2026 às 15:30" → date: "2026-01-30T15:30:00"
+
+                If NO scheduled event is found, return null.
 
                 EMAIL CONTENT:
                 %s
                 """
-                .formatted(receivedAt.toString(), cleanBody);
+                .formatted(todayDate, todayTime, todayISO, todayISO, cleanBody);
     }
 
     private String buildRequestBody(String prompt) {
@@ -135,7 +169,7 @@ public class GeminiServiceAdapter implements AiAnalysisPort {
             // Navigate to: candidates[0].content.parts[0].text
             JsonNode candidates = root.path("candidates");
             if (candidates.isMissingNode() || candidates.isEmpty()) {
-                log.warn("Gemini returned no candidates");
+                log.warn("[LLM] Gemini retornou sem 'candidates' (resposta pode ser erro ou bloqueio). Resposta (início): {}", jsonResponse != null && jsonResponse.length() > 500 ? jsonResponse.substring(0, 500) : jsonResponse);
                 return null;
             }
 
@@ -159,7 +193,7 @@ public class GeminiServiceAdapter implements AiAnalysisPort {
             return objectMapper.readValue(responseText, ClassAlertDto.class);
 
         } catch (Exception e) {
-            log.warn("Failed to parse Gemini response: {}. Error: {}", jsonResponse, e.getMessage());
+            log.warn("[LLM] Falha ao fazer parse da resposta Gemini. Erro: {} | Resposta (início): {}", e.getMessage(), jsonResponse != null && jsonResponse.length() > 400 ? jsonResponse.substring(0, 400) : jsonResponse);
             return null;
         }
     }

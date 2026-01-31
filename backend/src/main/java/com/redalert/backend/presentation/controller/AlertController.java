@@ -1,11 +1,10 @@
 package com.redalert.backend.presentation.controller;
 
-import com.redalert.backend.application.usecase.AlertHistoryService;
-import com.redalert.backend.application.usecase.ProcessedEmailService;
 import com.redalert.backend.domain.model.ClassAlertDto;
-import com.redalert.backend.domain.model.ProcessedEmail;
-import com.redalert.backend.domain.port.NotificationPort;
-import com.redalert.backend.domain.repository.ProcessedEmailRepository;
+import com.redalert.backend.service.AlertHistoryService;
+import com.redalert.backend.service.EmailPollingService;
+import com.redalert.backend.service.NotificationSender;
+import com.redalert.backend.service.ProcessedEmailService;
 import com.redalert.backend.presentation.dto.AlertResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,8 +28,9 @@ import java.util.Map;
 public class AlertController {
 
         private final AlertHistoryService alertHistoryService;
-        private final ProcessedEmailRepository processedEmailRepository;
-        private final NotificationPort notificationPort;
+        private final ProcessedEmailService processedEmailService;
+        private final NotificationSender notificationSender;
+        private final EmailPollingService emailPollingService;
 
         /**
          * Gets alert history from database.
@@ -124,7 +124,7 @@ public class AlertController {
                 alertHistoryService.addAlert(alert);
 
                 // Send via WebSocket
-                notificationPort.sendAlert(alert);
+                notificationSender.sendAlert(alert);
 
                 log.info("🧪 Simulated alert sent for email: {}", email.getSubject());
 
@@ -158,12 +158,8 @@ public class AlertController {
                                 null // no calendar link
                 );
 
-                // Save to history
                 alertHistoryService.addAlert(alert);
-
-                // Send via WebSocket
-                notificationPort.sendAlert(alert);
-
+                notificationSender.sendAlert(alert);
                 log.info("🧪 Test alert sent: {}", title);
 
                 return ResponseEntity.ok(Map.of(
@@ -176,8 +172,6 @@ public class AlertController {
                                                 "isUrgent", alert.isUrgent(),
                                                 "url", url != null ? url : "")));
         }
-
-        private final com.redalert.backend.application.usecase.EmailPollingService emailPollingService;
 
         @DeleteMapping("/calendar")
         @Operation(summary = "Limpar eventos do calendário", description = "Deleta TODOS os eventos do calendário principal para a data especificada.")
