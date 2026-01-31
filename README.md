@@ -30,11 +30,10 @@ Sistema completo de monitoramento em tempo real que detecta emails importantes d
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                         BACKEND                              │
-│  Java 21 + Spring Boot 3 (Hexagonal Architecture)           │
-│  • Email polling service (@Scheduled)                        │
-│  • Gemini AI integration                                     │
-│  • Google Calendar integration                               │
-│  • WebSocket server (STOMP)                                  │
+│  Java 21 + Spring Boot 3 (Arquitetura em Camadas)           │
+│  • Presentation → Service → Domain ← Infrastructure          │
+│  • Email polling (@Scheduled), IA (Ollama/Gemini)            │
+│  • Google Calendar, WebSocket server (STOMP)                 │
 └─────────────────────────────────────────────────────────────┘
                             │
                             ▼
@@ -77,10 +76,10 @@ Sistema completo de monitoramento em tempo real que detecta emails importantes d
 red-alert-app/
 ├── backend/                    # Java Spring Boot
 │   ├── src/main/java/com/redalert/backend/
-│   │   ├── domain/             # Camada de Domínio
-│   │   ├── application/        # Casos de Uso
-│   │   ├── infrastructure/      # Adaptadores
-│   │   └── presentation/       # Controllers REST
+│   │   ├── domain/             # Modelo (entidades e DTOs)
+│   │   ├── service/            # Casos de uso e interfaces (AiAnalyzer, GmailClient, NotificationSender)
+│   │   ├── infrastructure/    # Persistência (JPA), Gmail, IA, WebSocket, config
+│   │   └── presentation/       # Controllers REST e DTOs
 │   ├── pom.xml
 │   ├── README.md
 │   ├── ARCHITECTURE.md
@@ -230,7 +229,7 @@ Invoke-RestMethod -Uri "http://localhost:8086/api/v1/alerts/simulate/test" -Meth
 
 - **Backend**:
   - [`backend/README.md`](backend/README.md) - Documentação geral
-  - [`backend/ARCHITECTURE.md`](backend/ARCHITECTURE.md) - Arquitetura hexagonal
+  - [`backend/ARCHITECTURE.md`](backend/ARCHITECTURE.md) - Arquitetura em camadas (SOLID, Clean Code, GoF)
   - [`backend/SETUP.md`](backend/SETUP.md) - Setup em 5 minutos
 
 - **Frontend**:
@@ -303,9 +302,8 @@ $env:GEMINI_API_KEY="sua-chave"; mvn spring-boot:run
 ## 🤝 Contribuindo
 
 Este projeto segue:
-- **Clean Architecture** e **Hexagonal Architecture**
-- **SOLID Principles**
-- **Clean Code** (Robert C. Martin)
+- **Arquitetura em camadas** (Presentation → Service → Domain ← Infrastructure)
+- **SOLID**, **Clean Code** (Robert C. Martin), **GoF** (Strategy, Adapter)
 - **TypeScript Strict Mode**
 - **Tailwind CSS** (sem CSS customizado)
 
