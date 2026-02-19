@@ -1,6 +1,7 @@
 package com.redalert.backend.presentation.controller;
 
 import com.redalert.backend.domain.model.ClassAlertDto;
+import com.redalert.backend.domain.model.ProcessedEmail;
 import com.redalert.backend.service.AlertHistoryService;
 import com.redalert.backend.service.EmailPollingService;
 import com.redalert.backend.service.NotificationSender;
@@ -107,9 +108,7 @@ public class AlertController {
         public ResponseEntity<Map<String, Object>> simulateAlertFromEmail(
                         @PathVariable Long processedEmailId) {
 
-                ProcessedEmail email = processedEmailRepository.findById(processedEmailId)
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Processed email not found with id: " + processedEmailId));
+                ProcessedEmail email = processedEmailService.getProcessedEmailById(processedEmailId);
 
                 ClassAlertDto alert = new ClassAlertDto(
                                 "🚨 " + email.getSubject(),
